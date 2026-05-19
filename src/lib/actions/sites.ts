@@ -69,3 +69,19 @@ export async function toggleSiteEstado(id: string, estado: string) {
   revalidatePath('/obras')
   return { success: true }
 }
+
+export async function deleteSite(id: string) {
+  const supabase = await createClient()
+  // Apagar alocações desta obra e respetivos equipamentos
+  const { data: siteAssignments } = await supabase
+    .from('assignments').select('id').eq('site_id', id)
+  if (siteAssignments && siteAssignments.length > 0) {
+    const ids = siteAssignments.map(a => a.id)
+    await supabase.from('assignment_equipment').delete().in('assignment_id', ids)
+    await supabase.from('assignments').delete().in('id', ids)
+  }
+  const { error } = await supabase.from('sites').delete().eq('id', id)
+  if (error) return { error: error.message }
+  revalidatePath('/obras')
+  return { success: true }
+}

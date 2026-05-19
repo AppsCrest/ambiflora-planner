@@ -160,10 +160,15 @@ export function AssignmentModal({
           </div>
 
           {/* Equipamentos */}
-          {equipment.length > 0 && (
-            <div className="space-y-1">
-              <Label>Equipamentos</Label>
-              <div className="grid grid-cols-2 gap-1.5 max-h-36 overflow-y-auto pr-1">
+          <div className="space-y-1">
+            <Label>Equipamentos</Label>
+            {equipment.length === 0 ? (
+              <p className="text-xs text-gray-400 py-1">
+                Nenhum equipamento registado.{' '}
+                <a href="/equipamentos/novo" className="underline text-green-700">Adicionar equipamento</a>
+              </p>
+            ) : (
+            <div className="grid grid-cols-2 gap-1.5 max-h-36 overflow-y-auto pr-1">
                 {equipment.map(eq => {
                   const occupied = occupiedEquipment.has(eq.id)
                   const checked = equipmentIds.includes(eq.id)
@@ -193,8 +198,8 @@ export function AssignmentModal({
                   )
                 })}
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Notas */}
           <div className="space-y-1">

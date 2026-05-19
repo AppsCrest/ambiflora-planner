@@ -50,6 +50,23 @@ export async function toggleTeamAtivo(id: string, ativo: boolean) {
   return { success: true }
 }
 
+export async function deleteTeam(id: string) {
+  const supabase = await createClient()
+  // Apagar alocações desta equipa e respetivos equipamentos
+  const { data: teamAssignments } = await supabase
+    .from('assignments').select('id').eq('team_id', id)
+  if (teamAssignments && teamAssignments.length > 0) {
+    const ids = teamAssignments.map(a => a.id)
+    await supabase.from('assignment_equipment').delete().in('assignment_id', ids)
+    await supabase.from('assignments').delete().in('id', ids)
+  }
+  // team_members tem ON DELETE CASCADE
+  const { error } = await supabase.from('teams').delete().eq('id', id)
+  if (error) return { error: error.message }
+  revalidatePath('/equipas')
+  return { success: true }
+}
+
 export async function addTeamMember(teamId: string, workerId: string) {
   const supabase = await createClient()
   const { error } = await supabase.from('team_members').insert({

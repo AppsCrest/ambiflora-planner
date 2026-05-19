@@ -64,3 +64,12 @@ export async function toggleWorkerAtivo(id: string, ativo: boolean) {
   revalidatePath('/trabalhadores')
   return { success: true }
 }
+
+export async function deleteWorker(id: string) {
+  const supabase = await createClient()
+  // team_members tem ON DELETE CASCADE, então apaga automaticamente
+  const { error } = await supabase.from('workers').delete().eq('id', id)
+  if (error) return { error: error.message }
+  revalidatePath('/trabalhadores')
+  return { success: true }
+}

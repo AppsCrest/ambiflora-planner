@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,6 +25,7 @@ export function SiteForm({ site, responsaveis = [] }: {
 }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  const [responsavelId, setResponsavelId] = useState(site?.responsavel_id ?? '')
 
   function handleSubmit(formData: FormData) {
     startTransition(async () => {
@@ -92,7 +93,7 @@ export function SiteForm({ site, responsaveis = [] }: {
 
       <div className="space-y-1.5">
         <Label htmlFor="responsavel_id">Pessoa Responsável</Label>
-        <Select name="responsavel_id" defaultValue={site?.responsavel_id ?? ''}>
+        <Select value={responsavelId} onValueChange={v => setResponsavelId(v ?? '')}>
           <SelectTrigger id="responsavel_id">
             <SelectValue placeholder="Nenhuma" />
           </SelectTrigger>
@@ -103,6 +104,7 @@ export function SiteForm({ site, responsaveis = [] }: {
             ))}
           </SelectContent>
         </Select>
+        <input type="hidden" name="responsavel_id" value={responsavelId} />
       </div>
 
       <div className="space-y-1.5">

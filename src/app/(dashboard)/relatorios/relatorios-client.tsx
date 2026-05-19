@@ -6,37 +6,15 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
 import { gerarRelatorio, exportarExcel } from './actions'
 
-interface Props {
-  workers: { id: string; nome: string }[]
-  teams: { id: string; nome: string; cor: string }[]
-  sites: { id: string; nome: string; cliente: string | null }[]
-  equipment: { id: string; nome: string }[]
-}
-
 export type RelatorioData = {
-  porTrabalhador: {
-    worker_id: string
-    nome: string
-    diasTrabalhados: number
-    obras: string[]
-    equipas: string[]
-  }[]
-  porObra: {
-    site_id: string
-    nome: string
-    cliente: string | null
-    diasAlocados: number
-    equipas: string[]
+  linhas: {
+    data: string
+    siteName: string
+    periodo: 'manha' | 'tarde'
+    trabalhadores: string[]
     equipamentos: string[]
-  }[]
-  porEquipamento: {
-    equipment_id: string
-    nome: string
-    diasUsado: number
-    obras: string[]
   }[]
 }
 
@@ -45,6 +23,18 @@ const primeiroDiaMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1)
 
 function toInputDate(d: Date) {
   return d.toISOString().split('T')[0]
+}
+
+function fmtDate(d: string) {
+  const [y, m, day] = d.split('-')
+  return `${day}/${m}/${y}`
+}
+
+interface Props {
+  workers: { id: string; nome: string }[]
+  teams: { id: string; nome: string; cor: string }[]
+  sites: { id: string; nome: string; cliente: string | null }[]
+  equipment: { id: string; nome: string }[]
 }
 
 export function RelatoriosClient({ workers, teams, sites, equipment }: Props) {
@@ -66,14 +56,9 @@ export function RelatoriosClient({ workers, teams, sites, equipment }: Props) {
   }
 
   function handleExport() {
-    if (!dados) return
     startExport(async () => {
       const result = await exportarExcel(dataInicio, dataFim)
-      if ('error' in result) {
-        toast.error(result.error)
-        return
-      }
-      // Descarregar o ficheiro Excel gerado
+      if ('error' in result) { toast.error(result.error); return }
       const bytes = new Uint8Array(result.buffer)
       const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
       const url = URL.createObjectURL(blob)
@@ -118,102 +103,47 @@ export function RelatoriosClient({ workers, teams, sites, equipment }: Props) {
       </div>
 
       {dados && (
-        <div className="space-y-6">
-          {/* Por Trabalhador */}
-          <section>
-            <h2 className="text-base font-semibold text-slate-700 mb-2 px-0.5">Por Trabalhador</h2>
-            <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/40 border-b">
-                  <tr>
-                    <th className="text-left px-4 py-2.5 font-medium text-slate-500 text-xs uppercase tracking-wide">Nome</th>
-                    <th className="text-left px-4 py-2.5 font-medium text-slate-500 text-xs uppercase tracking-wide">Dias</th>
-                    <th className="text-left px-4 py-2.5 font-medium text-slate-500 text-xs uppercase tracking-wide hidden md:table-cell">Obras</th>
-                    <th className="text-left px-4 py-2.5 font-medium text-slate-500 text-xs uppercase tracking-wide hidden lg:table-cell">Equipas</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {dados.porTrabalhador.length === 0 && (
-                    <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground text-sm">Sem dados no período seleccionado.</td></tr>
-                  )}
-                  {dados.porTrabalhador.map(r => (
-                    <tr key={r.worker_id} className="hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-2.5 font-medium text-slate-900">{r.nome}</td>
-                      <td className="px-4 py-2.5 text-slate-600 tabular-nums">{r.diasTrabalhados}</td>
-                      <td className="px-4 py-2.5 hidden md:table-cell">
-                        <div className="flex flex-wrap gap-1">
-                          {r.obras.map(o => <Badge key={o} variant="secondary" className="text-xs">{o}</Badge>)}
-                        </div>
-                      </td>
-                      <td className="px-4 py-2.5 hidden lg:table-cell text-slate-500 text-xs">{r.equipas.join(', ')}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        <div className="bg-white rounded-xl border shadow-sm overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/40 border-b">
+              <tr>
+                <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide">Dia</th>
+                <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide">Obra</th>
+                <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide">Período</th>
+                <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide">Trabalhador(es)</th>
+                <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide hidden md:table-cell">Equipamento(s)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {dados.linhas.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-10 text-center text-muted-foreground text-sm">
+                    Sem alocações no período seleccionado.
+                  </td>
+                </tr>
+              )}
+              {dados.linhas.map((r, i) => (
+                <tr key={i} className="hover:bg-muted/30 transition-colors">
+                  <td className="px-4 py-2.5 tabular-nums text-slate-600 whitespace-nowrap">{fmtDate(r.data)}</td>
+                  <td className="px-4 py-2.5 font-medium text-slate-900">{r.siteName}</td>
+                  <td className="px-4 py-2.5 text-slate-500 whitespace-nowrap">
+                    {r.periodo === 'manha' ? 'Manhã' : 'Tarde'}
+                  </td>
+                  <td className="px-4 py-2.5 text-slate-600">
+                    {r.trabalhadores.length > 0 ? r.trabalhadores.join(', ') : <span className="text-slate-400">—</span>}
+                  </td>
+                  <td className="px-4 py-2.5 text-slate-500 hidden md:table-cell">
+                    {r.equipamentos.length > 0 ? r.equipamentos.join(', ') : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {dados.linhas.length > 0 && (
+            <div className="px-4 py-2.5 border-t text-xs text-muted-foreground">
+              {dados.linhas.length} alocaç{dados.linhas.length === 1 ? 'ão' : 'ões'} no período
             </div>
-          </section>
-
-          {/* Por Obra */}
-          <section>
-            <h2 className="text-base font-semibold text-slate-700 mb-2 px-0.5">Por Obra</h2>
-            <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/40 border-b">
-                  <tr>
-                    <th className="text-left px-4 py-2.5 font-medium text-slate-500 text-xs uppercase tracking-wide">Obra</th>
-                    <th className="text-left px-4 py-2.5 font-medium text-slate-500 text-xs uppercase tracking-wide hidden sm:table-cell">Cliente</th>
-                    <th className="text-left px-4 py-2.5 font-medium text-slate-500 text-xs uppercase tracking-wide">Períodos</th>
-                    <th className="text-left px-4 py-2.5 font-medium text-slate-500 text-xs uppercase tracking-wide hidden md:table-cell">Equipamentos</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {dados.porObra.length === 0 && (
-                    <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground text-sm">Sem dados no período seleccionado.</td></tr>
-                  )}
-                  {dados.porObra.map(r => (
-                    <tr key={r.site_id} className="hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-2.5 font-medium text-slate-900">{r.nome}</td>
-                      <td className="px-4 py-2.5 text-slate-500 hidden sm:table-cell">{r.cliente ?? '—'}</td>
-                      <td className="px-4 py-2.5 text-slate-600 tabular-nums">{r.diasAlocados}</td>
-                      <td className="px-4 py-2.5 hidden md:table-cell text-xs text-slate-500">{r.equipamentos.join(', ') || '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          {/* Por Equipamento */}
-          <section>
-            <h2 className="text-base font-semibold text-slate-700 mb-2 px-0.5">Por Equipamento</h2>
-            <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/40 border-b">
-                  <tr>
-                    <th className="text-left px-4 py-2.5 font-medium text-slate-500 text-xs uppercase tracking-wide">Equipamento</th>
-                    <th className="text-left px-4 py-2.5 font-medium text-slate-500 text-xs uppercase tracking-wide">Períodos usados</th>
-                    <th className="text-left px-4 py-2.5 font-medium text-slate-500 text-xs uppercase tracking-wide hidden md:table-cell">Obras</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {dados.porEquipamento.length === 0 && (
-                    <tr><td colSpan={3} className="px-4 py-8 text-center text-muted-foreground text-sm">Sem dados no período seleccionado.</td></tr>
-                  )}
-                  {dados.porEquipamento.map(r => (
-                    <tr key={r.equipment_id} className="hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-2.5 font-medium text-slate-900">{r.nome}</td>
-                      <td className="px-4 py-2.5 text-slate-600 tabular-nums">{r.diasUsado}</td>
-                      <td className="px-4 py-2.5 hidden md:table-cell">
-                        <div className="flex flex-wrap gap-1">
-                          {r.obras.map(o => <Badge key={o} variant="secondary" className="text-xs">{o}</Badge>)}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
+          )}
         </div>
       )}
     </div>

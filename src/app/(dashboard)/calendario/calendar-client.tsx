@@ -13,6 +13,14 @@ import { BulkAssignmentModal } from './bulk-assignment-modal'
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
 const DIAS_SEMANA = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom']
 
+const WORKER_PALETTE = ['#16a34a','#0d9488','#0891b2','#65a30d','#15803d','#0f766e','#047857','#ca8a04']
+
+function workerColor(id: string): string {
+  let h = 0
+  for (let i = 0; i < id.length; i++) h = ((h << 5) - h + id.charCodeAt(i)) | 0
+  return WORKER_PALETTE[Math.abs(h) % WORKER_PALETTE.length]
+}
+
 export type Assignment = {
   id: string
   data: string
@@ -48,6 +56,7 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
   const [filterTeam, setFilterTeam] = useState<string>('')
   const [filterSite, setFilterSite] = useState<string>('')
   const [filterWorker, setFilterWorker] = useState<string>('')
+  const [filterEquipment, setFilterEquipment] = useState<string>('')
   const [selectedCell, setSelectedCell] = useState<SelectedCell | null>(null)
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
@@ -85,9 +94,12 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
         const matchesDirectly = a.worker_id === filterWorker
         if (!matchesViaTeam && !matchesDirectly) return false
       }
+      if (filterEquipment) {
+        if (!a.assignment_equipment.some(e => e.equipment_id === filterEquipment)) return false
+      }
       return true
     })
-  }, [assignments, filterTeam, filterSite, filterWorker, workerTeams])
+  }, [assignments, filterTeam, filterSite, filterWorker, filterEquipment, workerTeams])
 
   // Build calendar grid: array of weeks, each with 7 days (null = padding)
   const weeks = useMemo(() => {
@@ -137,7 +149,7 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
   const isToday = (day: number) =>
     day === today.getDate() && mes === today.getMonth() + 1 && ano === today.getFullYear()
 
-  const hasActiveFilter = filterTeam || filterSite || filterWorker
+  const hasActiveFilter = filterTeam || filterSite || filterWorker || filterEquipment
 
   return (
     <div className="space-y-4">
@@ -196,9 +208,18 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
             {workers.map(w => <SelectItem key={w.id} value={w.id}>{w.nome}</SelectItem>)}
           </SelectContent>
         </Select>
+        <Select value={filterEquipment || ''} onValueChange={(v) => setFilterEquipment(v ?? '')}>
+          <SelectTrigger className="w-40 h-7 text-xs">
+            <SelectValue placeholder="Equipamento" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">Todos os equipamentos</SelectItem>
+            {equipment.map(e => <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>)}
+          </SelectContent>
+        </Select>
         {hasActiveFilter && (
           <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => {
-            setFilterTeam(''); setFilterSite(''); setFilterWorker('')
+            setFilterTeam(''); setFilterSite(''); setFilterWorker(''); setFilterEquipment('')
           }}>
             Limpar filtros
           </Button>
@@ -256,7 +277,7 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
                                   key={a.id}
                                   onClick={e => { e.stopPropagation(); openEdit(a) }}
                                   className="w-full text-left text-[10px] font-medium rounded px-1 py-0.5 truncate text-white hover:opacity-80 transition-opacity"
-                                  style={{ backgroundColor: a.teams?.cor ?? '#6366f1' }}
+                                  style={{ backgroundColor: a.teams?.cor ?? workerColor(a.worker_id ?? a.id) }}
                                   title={`${a.teams?.nome ?? a.workers?.nome} — ${a.sites?.nome}`}
                                 >
                                   {a.teams?.nome ?? a.workers?.nome}

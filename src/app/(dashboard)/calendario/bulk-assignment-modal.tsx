@@ -313,7 +313,7 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
               <DialogClose render={<Button variant="outline" size="sm" />}>Cancelar</DialogClose>
               <Button
                 size="sm"
-                disabled={isPending || !teamId || !siteId || periodsToCreate.length === 0}
+                disabled={isPending || (mode === 'equipa' ? !teamId : !workerId) || !siteId || periodsToCreate.length === 0}
                 onClick={handleVerificar}
               >
                 {isPending

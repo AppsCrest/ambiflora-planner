@@ -83,6 +83,16 @@ export async function bulkCreateAssignments(input: {
   return { created }
 }
 
+export async function deleteAssignments(ids: string[]) {
+  if (ids.length === 0) return { success: true }
+  const supabase = await createClient()
+  await supabase.from('assignment_equipment').delete().in('assignment_id', ids)
+  const { error } = await supabase.from('assignments').delete().in('id', ids)
+  if (error) return { error: error.message }
+  revalidatePath('/calendario')
+  return { success: true }
+}
+
 export async function deleteAssignment(id: string) {
   const supabase = await createClient()
   const { error } = await supabase.from('assignments').delete().eq('id', id)

@@ -175,7 +175,9 @@ export function AssignmentModal({
               <Label>Equipa *</Label>
               <Select value={teamId} onValueChange={v => setTeamId(v ?? '')}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Escolher equipa..." />
+                  <SelectValue placeholder="Escolher equipa...">
+                    {teamId ? teams.find(t => t.id === teamId)?.nome : null}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {teams.map(t => {
@@ -198,7 +200,9 @@ export function AssignmentModal({
               <Label>Trabalhador *</Label>
               <Select value={workerId} onValueChange={v => setWorkerId(v ?? '')}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Escolher trabalhador..." />
+                  <SelectValue placeholder="Escolher trabalhador...">
+                    {workerId ? workers.find(w => w.id === workerId)?.nome : null}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {workers.map(w => {
@@ -227,7 +231,9 @@ export function AssignmentModal({
             <Label>Obra *</Label>
             <Select value={siteId} onValueChange={v => setSiteId(v ?? '')}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Escolher obra..." />
+                <SelectValue placeholder="Escolher obra...">
+                  {siteId ? sites.find(s => s.id === siteId)?.nome : null}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {sites.map(s => (

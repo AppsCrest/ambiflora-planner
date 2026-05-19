@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { AssignmentModal } from './assignment-modal'
-import { BulkAssignmentModal } from './bulk-assignment-modal'
+import { BulkAssignmentModal, type EditBlockData } from './bulk-assignment-modal'
 
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
 const DIAS_SEMANA = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom']
@@ -19,6 +19,33 @@ function workerColor(id: string): string {
   let h = 0
   for (let i = 0; i < id.length; i++) h = ((h << 5) - h + id.charCodeAt(i)) | 0
   return WORKER_PALETTE[Math.abs(h) % WORKER_PALETTE.length]
+}
+
+function areConsecutive(a: Assignment, b: Assignment): boolean {
+  if (a.periodo === 'manha') return b.data === a.data && b.periodo === 'tarde'
+  const next = new Date(a.data + 'T00:00:00')
+  next.setDate(next.getDate() + 1)
+  return b.data === next.toISOString().split('T')[0] && b.periodo === 'manha'
+}
+
+function detectBlock(clicked: Assignment, all: Assignment[]): Assignment[] {
+  if (!clicked.team_id && !clicked.worker_id) return [clicked]
+  const related = all
+    .filter(a =>
+      (clicked.team_id ? a.team_id === clicked.team_id : a.worker_id === clicked.worker_id) &&
+      a.site_id === clicked.site_id
+    )
+    .sort((a, b) => {
+      const dc = a.data.localeCompare(b.data)
+      return dc !== 0 ? dc : (a.periodo === 'manha' ? -1 : 1)
+    })
+  const idx = related.findIndex(a => a.id === clicked.id)
+  if (idx === -1) return [clicked]
+  let start = idx
+  while (start > 0 && areConsecutive(related[start - 1], related[start])) start--
+  let end = idx
+  while (end < related.length - 1 && areConsecutive(related[end], related[end + 1])) end++
+  return related.slice(start, end + 1)
 }
 
 export type Assignment = {
@@ -58,11 +85,11 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
   const [filterWorker, setFilterWorker] = useState<string>('')
   const [filterEquipment, setFilterEquipment] = useState<string>('')
   const [selectedCell, setSelectedCell] = useState<SelectedCell | null>(null)
-  const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [bulkModalOpen, setBulkModalOpen] = useState(false)
+  const [blockEditOpen, setBlockEditOpen] = useState(false)
+  const [blockToEdit, setBlockToEdit] = useState<EditBlockData | null>(null)
 
-  // Real-time: refresh page data when DB changes
   useEffect(() => {
     const supabase = createClient()
     const channel = supabase
@@ -73,7 +100,6 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
     return () => { supabase.removeChannel(channel) }
   }, [router])
 
-  // Worker→teams mapping for filter
   const workerTeams = useMemo(() => {
     const map: Record<string, Set<string>> = {}
     teamMembers.forEach(({ worker_id, team_id }) => {
@@ -83,7 +109,6 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
     return map
   }, [teamMembers])
 
-  // Filter assignments
   const filteredAssignments = useMemo(() => {
     return assignments.filter(a => {
       if (filterTeam && a.team_id !== filterTeam) return false
@@ -101,11 +126,10 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
     })
   }, [assignments, filterTeam, filterSite, filterWorker, filterEquipment, workerTeams])
 
-  // Build calendar grid: array of weeks, each with 7 days (null = padding)
   const weeks = useMemo(() => {
     const firstDay = new Date(ano, mes - 1, 1)
     const lastDay = new Date(ano, mes, 0)
-    const startOffset = (firstDay.getDay() + 6) % 7 // Mon=0
+    const startOffset = (firstDay.getDay() + 6) % 7
     const days: (number | null)[] = [
       ...Array(startOffset).fill(null),
       ...Array.from({ length: lastDay.getDate() }, (_, i) => i + 1),
@@ -135,14 +159,31 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
 
   function openCreate(day: number, periodo: 'manha' | 'tarde') {
     setSelectedCell({ data: getDateString(day), periodo })
-    setSelectedAssignment(null)
     setModalOpen(true)
   }
 
-  function openEdit(assignment: Assignment) {
-    setSelectedCell({ data: assignment.data, periodo: assignment.periodo })
-    setSelectedAssignment(assignment)
-    setModalOpen(true)
+  function openEditBlock(a: Assignment) {
+    const block = detectBlock(a, assignments)
+    const sorted = [...block].sort((x, y) => {
+      const dc = x.data.localeCompare(y.data)
+      return dc !== 0 ? dc : (x.periodo === 'manha' ? -1 : 1)
+    })
+    const first = sorted[0]
+    const last = sorted[sorted.length - 1]
+    setBlockToEdit({
+      ids: sorted.map(x => x.id),
+      startDate: first.data,
+      startPeriodo: first.periodo,
+      endDate: last.data,
+      endPeriodo: last.periodo,
+      mode: a.team_id ? 'equipa' : 'trabalhador',
+      teamId: a.team_id ?? '',
+      workerId: a.worker_id ?? '',
+      siteId: a.site_id,
+      notas: a.notas ?? '',
+      equipmentIds: a.assignment_equipment.map(e => e.equipment_id),
+    })
+    setBlockEditOpen(true)
   }
 
   const today = new Date()
@@ -183,7 +224,9 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
         <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
         <Select value={filterTeam || ''} onValueChange={(v) => setFilterTeam(v ?? '')}>
           <SelectTrigger className="w-40 h-7 text-xs">
-            <SelectValue placeholder="Equipa" />
+            <SelectValue placeholder="Equipa">
+              {filterTeam ? teams.find(t => t.id === filterTeam)?.nome : null}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="">Todas as equipas</SelectItem>
@@ -192,7 +235,9 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
         </Select>
         <Select value={filterSite || ''} onValueChange={(v) => setFilterSite(v ?? '')}>
           <SelectTrigger className="w-40 h-7 text-xs">
-            <SelectValue placeholder="Obra" />
+            <SelectValue placeholder="Obra">
+              {filterSite ? sites.find(s => s.id === filterSite)?.nome : null}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="">Todas as obras</SelectItem>
@@ -201,7 +246,9 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
         </Select>
         <Select value={filterWorker || ''} onValueChange={(v) => setFilterWorker(v ?? '')}>
           <SelectTrigger className="w-40 h-7 text-xs">
-            <SelectValue placeholder="Trabalhador" />
+            <SelectValue placeholder="Trabalhador">
+              {filterWorker ? workers.find(w => w.id === filterWorker)?.nome : null}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="">Todos os trabalhadores</SelectItem>
@@ -210,7 +257,9 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
         </Select>
         <Select value={filterEquipment || ''} onValueChange={(v) => setFilterEquipment(v ?? '')}>
           <SelectTrigger className="w-40 h-7 text-xs">
-            <SelectValue placeholder="Equipamento" />
+            <SelectValue placeholder="Equipamento">
+              {filterEquipment ? equipment.find(e => e.id === filterEquipment)?.nome : null}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="">Todos os equipamentos</SelectItem>
@@ -229,7 +278,6 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
       {/* Grelha */}
       <div className="overflow-x-auto rounded-xl border bg-white shadow-sm">
         <div className="min-w-[700px]">
-          {/* Cabeçalho dos dias da semana */}
           <div className="grid grid-cols-7 border-b bg-muted/40">
             {DIAS_SEMANA.map(d => (
               <div key={d} className="text-center text-xs font-semibold text-slate-500 py-2.5 uppercase tracking-wide">
@@ -238,7 +286,6 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
             ))}
           </div>
 
-          {/* Semanas */}
           {weeks.map((week, wi) => (
             <div key={wi} className={cn('grid grid-cols-7', wi < weeks.length - 1 && 'border-b')}>
               {week.map((day, di) => (
@@ -275,7 +322,7 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
                               {cellAssignments.map(a => (
                                 <button
                                   key={a.id}
-                                  onClick={e => { e.stopPropagation(); openEdit(a) }}
+                                  onClick={e => { e.stopPropagation(); openEditBlock(a) }}
                                   className="w-full text-left text-[10px] font-medium rounded px-1 py-0.5 truncate text-white hover:opacity-80 transition-opacity"
                                   style={{ backgroundColor: a.teams?.cor ?? workerColor(a.worker_id ?? a.id) }}
                                   title={`${a.teams?.nome ?? a.workers?.nome} — ${a.sites?.nome}`}
@@ -308,7 +355,7 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
         </div>
       )}
 
-      {/* Modal de intervalo */}
+      {/* Modal novo bloco */}
       <BulkAssignmentModal
         open={bulkModalOpen}
         onOpenChange={setBulkModalOpen}
@@ -319,12 +366,24 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
         existingAssignments={assignments}
       />
 
-      {/* Modal de célula */}
+      {/* Modal editar bloco */}
+      <BulkAssignmentModal
+        open={blockEditOpen}
+        onOpenChange={(o) => { setBlockEditOpen(o); if (!o) setBlockToEdit(null) }}
+        teams={teams}
+        sites={sites}
+        equipment={equipment}
+        workers={workers}
+        existingAssignments={assignments}
+        editBlock={blockToEdit}
+      />
+
+      {/* Modal criar período único */}
       <AssignmentModal
         open={modalOpen}
-        onOpenChange={(o) => { setModalOpen(o); if (!o) { setSelectedCell(null); setSelectedAssignment(null) } }}
+        onOpenChange={(o) => { setModalOpen(o); if (!o) setSelectedCell(null) }}
         selectedCell={selectedCell}
-        selectedAssignment={selectedAssignment}
+        selectedAssignment={null}
         teams={teams}
         sites={sites}
         equipment={equipment}

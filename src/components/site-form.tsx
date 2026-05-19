@@ -26,6 +26,14 @@ export function SiteForm({ site, responsaveis = [] }: {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [responsavelId, setResponsavelId] = useState(site?.responsavel_id ?? '')
+  const [estado, setEstado] = useState(site?.estado ?? 'por_comecar')
+
+  const ESTADO_LABELS: Record<string, string> = {
+    por_comecar: 'Por Começar',
+    em_curso: 'Em Curso',
+    pausada: 'Em Pausa',
+    concluida: 'Concluída',
+  }
 
   function handleSubmit(formData: FormData) {
     startTransition(async () => {
@@ -56,9 +64,9 @@ export function SiteForm({ site, responsaveis = [] }: {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="estado">Estado</Label>
-          <Select name="estado" defaultValue={site?.estado ?? 'por_comecar'}>
+          <Select value={estado} onValueChange={v => setEstado(v || 'por_comecar')}>
             <SelectTrigger id="estado">
-              <SelectValue />
+              <SelectValue>{ESTADO_LABELS[estado]}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="por_comecar">Por Começar</SelectItem>
@@ -67,6 +75,7 @@ export function SiteForm({ site, responsaveis = [] }: {
               <SelectItem value="concluida">Concluída</SelectItem>
             </SelectContent>
           </Select>
+          <input type="hidden" name="estado" value={estado} />
         </div>
       </div>
 
@@ -95,7 +104,9 @@ export function SiteForm({ site, responsaveis = [] }: {
         <Label htmlFor="responsavel_id">Pessoa Responsável</Label>
         <Select value={responsavelId} onValueChange={v => setResponsavelId(v ?? '')}>
           <SelectTrigger id="responsavel_id">
-            <SelectValue placeholder="Nenhuma" />
+            <SelectValue placeholder="Nenhuma">
+              {responsavelId ? (responsaveis.find(r => r.id === responsavelId)?.nome ?? null) : null}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="">Nenhuma</SelectItem>

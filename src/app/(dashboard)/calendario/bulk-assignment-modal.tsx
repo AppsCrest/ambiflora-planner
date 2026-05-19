@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useMemo, useTransition } from 'react'
-import { AlertTriangle, Loader2, ChevronLeft } from 'lucide-react'
+import { useState, useMemo, useTransition, useEffect } from 'react'
+import { AlertTriangle, Loader2, ChevronLeft, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose,
@@ -11,10 +11,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { bulkCreateAssignments } from '@/lib/actions/assignments'
+import { bulkCreateAssignments, deleteAssignments } from '@/lib/actions/assignments'
 import type { Assignment } from './calendar-client'
 
-const PERIODO_LABEL = { manha: 'Manhã', tarde: 'Tarde' }
+const PERIODO_LABEL: Record<'manha' | 'tarde', string> = { manha: 'Manhã', tarde: 'Tarde' }
 
 function formatDatePT(d: string) {
   const [y, m, day] = d.split('-')
@@ -30,16 +30,13 @@ function generatePeriods(
   const start = new Date(startDate + 'T00:00:00')
   const end = new Date(endDate + 'T00:00:00')
   if (start > end) return result
-
   const cur = new Date(start)
   while (cur <= end) {
     const dateStr = cur.toISOString().split('T')[0]
     const isFirst = dateStr === startDate
     const isLast = dateStr === endDate
-    const addManha = !isFirst || startPeriodo === 'manha'
-    const addTarde = !isLast || endPeriodo === 'tarde'
-    if (addManha) result.push({ data: dateStr, periodo: 'manha' })
-    if (addTarde) result.push({ data: dateStr, periodo: 'tarde' })
+    if (!isFirst || startPeriodo === 'manha') result.push({ data: dateStr, periodo: 'manha' })
+    if (!isLast || endPeriodo === 'tarde') result.push({ data: dateStr, periodo: 'tarde' })
     cur.setDate(cur.getDate() + 1)
   }
   return result
@@ -51,6 +48,20 @@ interface ConflictInfo {
   existingSiteName: string
 }
 
+export interface EditBlockData {
+  ids: string[]
+  startDate: string
+  startPeriodo: 'manha' | 'tarde'
+  endDate: string
+  endPeriodo: 'manha' | 'tarde'
+  mode: 'equipa' | 'trabalhador'
+  teamId: string
+  workerId: string
+  siteId: string
+  notas: string
+  equipmentIds: string[]
+}
+
 interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -59,9 +70,10 @@ interface Props {
   equipment: { id: string; nome: string }[]
   workers: { id: string; nome: string }[]
   existingAssignments: Assignment[]
+  editBlock?: EditBlockData | null
 }
 
-export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipment, workers, existingAssignments }: Props) {
+export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipment, workers, existingAssignments, editBlock }: Props) {
   const today = new Date().toISOString().split('T')[0]
 
   const [mode, setMode] = useState<'equipa' | 'trabalhador'>('equipa')
@@ -77,7 +89,24 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
   const [step, setStep] = useState<'form' | 'confirm'>('form')
   const [isPending, startTransition] = useTransition()
 
+  useEffect(() => {
+    if (open && editBlock) {
+      setMode(editBlock.mode)
+      setStartDate(editBlock.startDate)
+      setStartPeriodo(editBlock.startPeriodo)
+      setEndDate(editBlock.endDate)
+      setEndPeriodo(editBlock.endPeriodo)
+      setTeamId(editBlock.teamId)
+      setWorkerId(editBlock.workerId)
+      setSiteId(editBlock.siteId)
+      setNotas(editBlock.notas)
+      setEquipmentIds(editBlock.equipmentIds)
+      setStep('form')
+    }
+  }, [open, editBlock])
+
   function reset() {
+    if (editBlock) return
     setMode('equipa')
     setStartDate(today)
     setStartPeriodo('manha')
@@ -105,14 +134,16 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
 
   const conflicts: ConflictInfo[] = useMemo(() => {
     if (!activeId) return []
+    const excludeIds = new Set(editBlock?.ids ?? [])
     return periods.flatMap(p => {
       const existing = existingAssignments.find(a =>
+        !excludeIds.has(a.id) &&
         a.data === p.data && a.periodo === p.periodo &&
         (mode === 'equipa' ? a.team_id === activeId : a.worker_id === activeId)
       )
       return existing ? [{ ...p, existingSiteName: existing.sites?.nome ?? '?' }] : []
     })
-  }, [periods, activeId, mode, existingAssignments])
+  }, [periods, activeId, mode, existingAssignments, editBlock])
 
   const periodsToCreate = useMemo(() => {
     const keys = new Set(conflicts.map(c => `${c.data}|${c.periodo}`))
@@ -134,6 +165,9 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
 
   function doCreate() {
     startTransition(async () => {
+      if (editBlock && editBlock.ids.length > 0) {
+        await deleteAssignments(editBlock.ids)
+      }
       const result = await bulkCreateAssignments(
         periodsToCreate.map(p => ({
           data: p.data,
@@ -146,17 +180,30 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
         }))
       )
       const n = result.created
-      toast.success(`${n} alocaç${n === 1 ? 'ão criada' : 'ões criadas'}`)
+      toast.success(`${n} alocaç${n === 1 ? 'ão' : 'ões'} ${editBlock ? 'atualizadas' : 'criadas'}`)
       handleOpenChange(false)
     })
   }
+
+  function handleDeleteBlock() {
+    if (!editBlock) return
+    startTransition(async () => {
+      await deleteAssignments(editBlock.ids)
+      toast.success('Bloco eliminado')
+      handleOpenChange(false)
+    })
+  }
+
+  const isEditMode = !!editBlock
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {step === 'form' ? 'Nova Alocação por Intervalo' : 'Confirmar Criação'}
+            {step === 'form'
+              ? isEditMode ? 'Editar Bloco' : 'Nova Alocação por Intervalo'
+              : 'Confirmar Criação'}
           </DialogTitle>
         </DialogHeader>
 
@@ -171,7 +218,9 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
               <div className="space-y-1.5">
                 <Label>Período</Label>
                 <Select value={startPeriodo} onValueChange={v => setStartPeriodo((v ?? 'manha') as 'manha' | 'tarde')}>
-                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-full">
+                    <SelectValue>{PERIODO_LABEL[startPeriodo]}</SelectValue>
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="manha">Manhã</SelectItem>
                     <SelectItem value="tarde">Tarde</SelectItem>
@@ -185,7 +234,9 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
               <div className="space-y-1.5">
                 <Label>Período</Label>
                 <Select value={endPeriodo} onValueChange={v => setEndPeriodo((v ?? 'tarde') as 'manha' | 'tarde')}>
-                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-full">
+                    <SelectValue>{PERIODO_LABEL[endPeriodo]}</SelectValue>
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="manha">Manhã</SelectItem>
                     <SelectItem value="tarde">Tarde</SelectItem>
@@ -206,12 +257,15 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
               </button>
             </div>
 
-            {/* Equipa ou Trabalhador */}
             {mode === 'equipa' ? (
               <div className="space-y-1.5">
                 <Label>Equipa *</Label>
                 <Select value={teamId} onValueChange={v => setTeamId(v ?? '')}>
-                  <SelectTrigger className="w-full"><SelectValue placeholder="Escolher equipa..." /></SelectTrigger>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Escolher equipa...">
+                      {teamId ? teams.find(t => t.id === teamId)?.nome : null}
+                    </SelectValue>
+                  </SelectTrigger>
                   <SelectContent>
                     {teams.map(t => (
                       <SelectItem key={t.id} value={t.id}>
@@ -228,7 +282,11 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
               <div className="space-y-1.5">
                 <Label>Trabalhador *</Label>
                 <Select value={workerId} onValueChange={v => setWorkerId(v ?? '')}>
-                  <SelectTrigger className="w-full"><SelectValue placeholder="Escolher trabalhador..." /></SelectTrigger>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Escolher trabalhador...">
+                      {workerId ? workers.find(w => w.id === workerId)?.nome : null}
+                    </SelectValue>
+                  </SelectTrigger>
                   <SelectContent>
                     {workers.map(w => (
                       <SelectItem key={w.id} value={w.id}>{w.nome}</SelectItem>
@@ -242,7 +300,11 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
             <div className="space-y-1.5">
               <Label>Obra *</Label>
               <Select value={siteId} onValueChange={v => setSiteId(v ?? '')}>
-                <SelectTrigger className="w-full"><SelectValue placeholder="Escolher obra..." /></SelectTrigger>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Escolher obra...">
+                    {siteId ? sites.find(s => s.id === siteId)?.nome : null}
+                  </SelectValue>
+                </SelectTrigger>
                 <SelectContent>
                   {sites.map(s => (
                     <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>
@@ -275,7 +337,6 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
               <Textarea rows={2} value={notas} onChange={e => setNotas(e.target.value)} placeholder="Observações opcionais..." />
             </div>
 
-            {/* Preview */}
             {periods.length > 0 && (
               <div className={`text-xs rounded-lg px-3 py-2 flex items-center gap-1.5 ${conflicts.length > 0 ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-primary/5 text-primary border border-primary/20'}`}>
                 {conflicts.length > 0 && <AlertTriangle className="h-3.5 w-3.5 shrink-0" />}
@@ -310,6 +371,11 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
         <DialogFooter>
           {step === 'form' ? (
             <>
+              {isEditMode && (
+                <Button variant="destructive" size="sm" disabled={isPending} onClick={handleDeleteBlock} className="mr-auto">
+                  <Trash2 className="h-4 w-4 mr-1" />Eliminar
+                </Button>
+              )}
               <DialogClose render={<Button variant="outline" size="sm" />}>Cancelar</DialogClose>
               <Button
                 size="sm"
@@ -317,10 +383,12 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
                 onClick={handleVerificar}
               >
                 {isPending
-                  ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />A criar...</>
+                  ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />A guardar...</>
                   : conflicts.length > 0
-                    ? `Ver conflitos (${periodsToCreate.length} a criar)`
-                    : `Criar ${periods.length} alocaç${periods.length === 1 ? 'ão' : 'ões'}`}
+                    ? `Ver conflitos (${periodsToCreate.length} a ${isEditMode ? 'guardar' : 'criar'})`
+                    : isEditMode
+                      ? `Guardar (${periodsToCreate.length} período${periodsToCreate.length !== 1 ? 's' : ''})`
+                      : `Criar ${periods.length} alocaç${periods.length === 1 ? 'ão' : 'ões'}`}
               </Button>
             </>
           ) : (
@@ -330,8 +398,8 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
               </Button>
               <Button size="sm" disabled={isPending || periodsToCreate.length === 0} onClick={doCreate}>
                 {isPending
-                  ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />A criar...</>
-                  : `Criar ${periodsToCreate.length} alocaç${periodsToCreate.length === 1 ? 'ão' : 'ões'}`}
+                  ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />A guardar...</>
+                  : `${isEditMode ? 'Guardar' : 'Criar'} ${periodsToCreate.length} alocaç${periodsToCreate.length === 1 ? 'ão' : 'ões'}`}
               </Button>
             </>
           )}

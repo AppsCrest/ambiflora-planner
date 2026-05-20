@@ -311,7 +311,7 @@ export default async function DashboardPage() {
             })}
           </div>
           <p className="text-xs text-muted-foreground text-center mt-2">
-            {(weekAssignments ?? []).length} alocação{(weekAssignments ?? []).length !== 1 ? 'ões' : ''} esta semana
+            {(weekAssignments ?? []).length} {(weekAssignments ?? []).length !== 1 ? 'alocações' : 'alocação'} esta semana
           </p>
         </div>
       </div>

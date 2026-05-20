@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Users, Wrench, MapPin, UsersRound, CalendarDays, BarChart3, Menu, Leaf, LogOut, UserCog } from 'lucide-react'
+import { Users, Wrench, MapPin, UsersRound, CalendarDays, BarChart3, Menu, Leaf, LogOut, UserCog, LayoutDashboard } from 'lucide-react'
 import { useState, useTransition } from 'react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { logout } from '@/lib/actions/auth'
 
 const navItems = [
+  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/calendario', label: 'Calendário', icon: CalendarDays },
   { href: '/trabalhadores', label: 'Trabalhadores', icon: Users },
   { href: '/responsaveis', label: 'Responsáveis', icon: UserCog },
@@ -24,7 +25,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <nav className="flex flex-col gap-0.5 px-3 py-2 flex-1">
       {navItems.map(({ href, label, icon: Icon }) => {
-        const active = pathname.startsWith(href)
+        const active = href === '/' ? pathname === '/' : pathname.startsWith(href)
         return (
           <Link
             key={href}
@@ -48,7 +49,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 
 function Brand() {
   return (
-    <div className="flex items-center gap-2.5 px-5 py-4 border-b border-border">
+    <Link href="/" className="flex items-center gap-2.5 px-5 py-4 border-b border-border hover:bg-muted/30 transition-colors">
       <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
         <Leaf className="h-4 w-4 text-primary-foreground" />
       </div>
@@ -56,7 +57,7 @@ function Brand() {
         <p className="font-bold text-sm text-slate-900 tracking-tight">Ambiflora</p>
         <p className="text-[11px] text-muted-foreground">Planeamento de Equipas</p>
       </div>
-    </div>
+    </Link>
   )
 }
 

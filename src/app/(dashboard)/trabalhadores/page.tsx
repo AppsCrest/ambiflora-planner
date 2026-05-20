@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { WorkerActions } from './worker-actions'
+import { CsvImportButton } from '@/components/csv-import-button'
+import { bulkImportWorkers } from '@/lib/actions/imports'
 
 export default async function TrabalhadoresPage() {
   const supabase = await createClient()
@@ -23,10 +25,19 @@ export default async function TrabalhadoresPage() {
             {ativos} activo{ativos !== 1 ? 's' : ''} · {workers?.length ?? 0} no total
           </p>
         </div>
-        <Button nativeButton={false} render={<Link href="/trabalhadores/novo" />}>
-          <Plus className="h-4 w-4 mr-1.5" />
-          Novo Trabalhador
-        </Button>
+        <div className="flex items-center gap-2">
+          <CsvImportButton
+            action={bulkImportWorkers}
+            entityName="trabalhador"
+            templateHeaders={['nome', 'cargo', 'telefone', 'email', 'data_admissao', 'notas']}
+            sampleRow={['João Silva', 'Jardineiro', '912345678', 'joao@ambiflora.pt', '2024-01-15', '']}
+            templateFilename="modelo_trabalhadores.csv"
+          />
+          <Button nativeButton={false} render={<Link href="/trabalhadores/novo" />}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            Novo Trabalhador
+          </Button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border overflow-hidden shadow-sm">

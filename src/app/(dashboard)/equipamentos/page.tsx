@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { EquipmentActions } from './equipment-actions'
+import { CsvImportButton } from '@/components/csv-import-button'
+import { bulkImportEquipment } from '@/lib/actions/imports'
 
 export default async function EquipamentosPage() {
   const supabase = await createClient()
@@ -23,10 +25,19 @@ export default async function EquipamentosPage() {
             {ativos} activo{ativos !== 1 ? 's' : ''} · {equipment?.length ?? 0} no total
           </p>
         </div>
-        <Button nativeButton={false} render={<Link href="/equipamentos/novo" />}>
-          <Plus className="h-4 w-4 mr-1.5" />
-          Novo Equipamento
-        </Button>
+        <div className="flex items-center gap-2">
+          <CsvImportButton
+            action={bulkImportEquipment}
+            entityName="equipamento"
+            templateHeaders={['nome', 'tipo', 'numero_serie', 'notas']}
+            sampleRow={['Corta-relva Honda', 'Corta-relva', 'SN-123456', '']}
+            templateFilename="modelo_equipamentos.csv"
+          />
+          <Button nativeButton={false} render={<Link href="/equipamentos/novo" />}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            Novo Equipamento
+          </Button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border overflow-hidden shadow-sm">

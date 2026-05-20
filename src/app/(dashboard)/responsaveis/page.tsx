@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ResponsavelActions } from './responsavel-actions'
+import { CsvImportButton } from '@/components/csv-import-button'
+import { bulkImportResponsaveis } from '@/lib/actions/imports'
 
 export default async function ResponsaveisPage() {
   const supabase = await createClient()
@@ -23,10 +25,19 @@ export default async function ResponsaveisPage() {
             {ativos} activo{ativos !== 1 ? 's' : ''} · {responsaveis?.length ?? 0} no total
           </p>
         </div>
-        <Button nativeButton={false} render={<Link href="/responsaveis/novo" />}>
-          <Plus className="h-4 w-4 mr-1.5" />
-          Novo Responsável
-        </Button>
+        <div className="flex items-center gap-2">
+          <CsvImportButton
+            action={bulkImportResponsaveis}
+            entityName="responsável"
+            templateHeaders={['nome', 'cargo', 'telefone', 'data_admissao', 'notas']}
+            sampleRow={['Maria Santos', 'Encarregado', '961234567', '2023-06-01', '']}
+            templateFilename="modelo_responsaveis.csv"
+          />
+          <Button nativeButton={false} render={<Link href="/responsaveis/novo" />}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            Novo Responsável
+          </Button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border overflow-hidden shadow-sm">

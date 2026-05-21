@@ -82,7 +82,7 @@ export async function exportarExcel(
   const wb = XLSX.utils.book_new()
 
   const rows = result.linhas.map(r => ({
-    'Dia': r.data,
+    'Dia': r.data.split('-').reverse().join('/'),
     'Obra': r.siteName,
     'Período': r.periodo === 'manha' ? 'Manhã' : 'Tarde',
     'Trabalhador(es)': r.trabalhadores.join(', ') || '—',

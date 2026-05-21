@@ -20,9 +20,12 @@ function parseDate(v: string | undefined): string | null {
 
 export async function bulkImportWorkers(rows: Row[]): Promise<{ created: number; errors: number }> {
   const supabase = await createClient()
+  const { data: existing } = await supabase.from('workers').select('nome')
+  const existingNames = new Set((existing ?? []).map(w => w.nome.toLowerCase()))
   let created = 0, errors = 0
   for (const row of rows) {
     if (!row.nome?.trim()) { errors++; continue }
+    if (existingNames.has(row.nome.trim().toLowerCase())) continue
     const { error } = await supabase.from('workers').insert({
       nome: row.nome.trim(),
       cargo: str(row.cargo),
@@ -31,7 +34,7 @@ export async function bulkImportWorkers(rows: Row[]): Promise<{ created: number;
       data_admissao: parseDate(row.data_admissao),
       notas: str(row.notas),
     })
-    if (error) errors++; else created++
+    if (error) errors++; else { created++; existingNames.add(row.nome.trim().toLowerCase()) }
   }
   revalidatePath('/trabalhadores')
   return { created, errors }
@@ -39,9 +42,12 @@ export async function bulkImportWorkers(rows: Row[]): Promise<{ created: number;
 
 export async function bulkImportResponsaveis(rows: Row[]): Promise<{ created: number; errors: number }> {
   const supabase = await createClient()
+  const { data: existing } = await supabase.from('responsaveis').select('nome')
+  const existingNames = new Set((existing ?? []).map(r => r.nome.toLowerCase()))
   let created = 0, errors = 0
   for (const row of rows) {
     if (!row.nome?.trim()) { errors++; continue }
+    if (existingNames.has(row.nome.trim().toLowerCase())) continue
     const { error } = await supabase.from('responsaveis').insert({
       nome: row.nome.trim(),
       cargo: str(row.cargo),
@@ -49,7 +55,7 @@ export async function bulkImportResponsaveis(rows: Row[]): Promise<{ created: nu
       data_admissao: parseDate(row.data_admissao),
       notas: str(row.notas),
     })
-    if (error) errors++; else created++
+    if (error) errors++; else { created++; existingNames.add(row.nome.trim().toLowerCase()) }
   }
   revalidatePath('/responsaveis')
   return { created, errors }
@@ -57,16 +63,19 @@ export async function bulkImportResponsaveis(rows: Row[]): Promise<{ created: nu
 
 export async function bulkImportEquipment(rows: Row[]): Promise<{ created: number; errors: number }> {
   const supabase = await createClient()
+  const { data: existing } = await supabase.from('equipment').select('nome')
+  const existingNames = new Set((existing ?? []).map(e => e.nome.toLowerCase()))
   let created = 0, errors = 0
   for (const row of rows) {
     if (!row.nome?.trim()) { errors++; continue }
+    if (existingNames.has(row.nome.trim().toLowerCase())) continue
     const { error } = await supabase.from('equipment').insert({
       nome: row.nome.trim(),
       tipo: str(row.tipo),
       numero_serie: str(row.numero_serie),
       notas: str(row.notas),
     })
-    if (error) errors++; else created++
+    if (error) errors++; else { created++; existingNames.add(row.nome.trim().toLowerCase()) }
   }
   revalidatePath('/equipamentos')
   return { created, errors }
@@ -76,9 +85,12 @@ const ESTADOS_VALIDOS = ['por_comecar', 'em_curso', 'concluida', 'pausada'] as c
 
 export async function bulkImportSites(rows: Row[]): Promise<{ created: number; errors: number }> {
   const supabase = await createClient()
+  const { data: existing } = await supabase.from('sites').select('nome')
+  const existingNames = new Set((existing ?? []).map(s => s.nome.toLowerCase()))
   let created = 0, errors = 0
   for (const row of rows) {
     if (!row.nome?.trim()) { errors++; continue }
+    if (existingNames.has(row.nome.trim().toLowerCase())) continue
     const estadoRaw = row.estado?.trim().toLowerCase()
     const estado = (ESTADOS_VALIDOS as readonly string[]).includes(estadoRaw)
       ? (estadoRaw as typeof ESTADOS_VALIDOS[number])
@@ -95,7 +107,7 @@ export async function bulkImportSites(rows: Row[]): Promise<{ created: number; e
       valor: valor && !isNaN(valor) ? valor : null,
       notas: str(row.notas),
     })
-    if (error) errors++; else created++
+    if (error) errors++; else { created++; existingNames.add(row.nome.trim().toLowerCase()) }
   }
   revalidatePath('/obras')
   return { created, errors }

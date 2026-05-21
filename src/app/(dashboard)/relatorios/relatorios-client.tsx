@@ -45,6 +45,10 @@ export function RelatoriosClient({ workers, teams, sites, equipment }: Props) {
   const [isExporting, startExport] = useTransition()
 
   function handleGerar() {
+    if (dataFim < dataInicio) {
+      toast.error('A data de fim não pode ser anterior à data de início.')
+      return
+    }
     startTransition(async () => {
       const result = await gerarRelatorio(dataInicio, dataFim)
       if ('error' in result) {

@@ -33,6 +33,9 @@ export async function createSite(formData: FormData) {
     responsavel_id: parsed.data.responsavel_id || null,
   }
 
+  if (data.data_inicio && data.data_fim_prevista && data.data_fim_prevista < data.data_inicio)
+    return { error: 'O prazo previsto não pode ser anterior à data de início.' }
+
   const { error } = await supabase.from('sites').insert(data)
   if (error) return { error: error.message }
 
@@ -56,6 +59,9 @@ export async function updateSite(id: string, formData: FormData) {
     notas: parsed.data.notas || null,
     responsavel_id: parsed.data.responsavel_id || null,
   }
+
+  if (data.data_inicio && data.data_fim_prevista && data.data_fim_prevista < data.data_inicio)
+    return { error: 'O prazo previsto não pode ser anterior à data de início.' }
 
   const { error } = await supabase.from('sites').update(data).eq('id', id)
   if (error) return { error: error.message }

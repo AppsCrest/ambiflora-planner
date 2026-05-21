@@ -27,6 +27,7 @@ export function SiteForm({ site, responsaveis = [] }: {
   const [isPending, startTransition] = useTransition()
   const [responsavelId, setResponsavelId] = useState(site?.responsavel_id ?? '')
   const [estado, setEstado] = useState(site?.estado ?? 'por_comecar')
+  const [dataInicio, setDataInicio] = useState(site?.data_inicio ?? '')
 
   const ESTADO_LABELS: Record<string, string> = {
     por_comecar: 'Por Começar',
@@ -87,11 +88,14 @@ export function SiteForm({ site, responsaveis = [] }: {
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <Label htmlFor="data_inicio">Data de Início</Label>
-          <Input id="data_inicio" name="data_inicio" type="date" defaultValue={site?.data_inicio ?? ''} />
+          <Input id="data_inicio" name="data_inicio" type="date"
+            value={dataInicio} onChange={e => setDataInicio(e.target.value)} />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="data_fim_prevista">Prazo Previsto</Label>
-          <Input id="data_fim_prevista" name="data_fim_prevista" type="date" defaultValue={site?.data_fim_prevista ?? ''} />
+          <Input id="data_fim_prevista" name="data_fim_prevista" type="date"
+            defaultValue={site?.data_fim_prevista ?? ''}
+            min={dataInicio || undefined} />
         </div>
       </div>
 

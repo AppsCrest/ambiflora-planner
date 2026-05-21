@@ -5,6 +5,7 @@ import { Trash2, UserCog, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { ResponsavelActions } from './responsavel-actions'
 import { deleteResponsaveis } from '@/lib/actions/responsaveis'
 
@@ -22,6 +23,7 @@ function fmtDate(d: string | null) {
 
 export function ResponsaveisTable({ responsaveis }: { responsaveis: Responsavel[] }) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [search, setSearch] = useState('')
   const [ativoFilter, setAtivoFilter] = useState<AtivoFilter>('todos')
@@ -53,18 +55,6 @@ export function ResponsaveisTable({ responsaveis }: { responsaveis: Responsavel[
     })
   }
 
-  function handleBulkDelete() {
-    const count = selectedIds.size
-    startTransition(async () => {
-      const result = await deleteResponsaveis([...selectedIds])
-      if (result.error) {
-        toast.error(result.error)
-      } else {
-        toast.success(`${count} responsável${count !== 1 ? 'is' : ''} eliminado${count !== 1 ? 's' : ''}`)
-        setSelectedIds(new Set())
-      }
-    })
-  }
 
   return (
     <div className="space-y-3">
@@ -76,12 +66,24 @@ export function ResponsaveisTable({ responsaveis }: { responsaveis: Responsavel[
             className="text-slate-300 hover:text-white hover:bg-white/10 h-7 text-xs">
             Cancelar
           </Button>
-          <Button variant="destructive" size="sm" disabled={isPending} onClick={handleBulkDelete} className="h-7 text-xs">
+          <Button variant="destructive" size="sm" disabled={isPending} onClick={() => setBulkDeleteOpen(true)} className="h-7 text-xs">
             <Trash2 className="h-3.5 w-3.5 mr-1" />
-            {isPending ? 'A eliminar...' : 'Eliminar'}
+            Eliminar
           </Button>
         </div>
       )}
+
+      <ConfirmDeleteDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        description={`Apagar permanentemente ${selectedIds.size} responsável${selectedIds.size !== 1 ? 'is' : ''}? Serão desassociados das obras a que pertencem.`}
+        onConfirm={async () => {
+          const result = await deleteResponsaveis([...selectedIds])
+          if (!result.error) setSelectedIds(new Set())
+          return result
+        }}
+        successMessage={`${selectedIds.size} responsável${selectedIds.size !== 1 ? 'is' : ''} eliminado${selectedIds.size !== 1 ? 's' : ''}`}
+      />
 
       <div className="bg-white rounded-xl border overflow-hidden shadow-sm">
         <div className="px-4 py-3 border-b flex items-center gap-3 flex-wrap">

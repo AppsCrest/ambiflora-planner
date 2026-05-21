@@ -5,6 +5,7 @@ import { Trash2, Users, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { WorkerActions } from './worker-actions'
 import { deleteWorkers } from '@/lib/actions/workers'
 
@@ -22,6 +23,7 @@ function fmtDate(d: string | null) {
 
 export function WorkersTable({ workers }: { workers: Worker[] }) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [search, setSearch] = useState('')
   const [ativoFilter, setAtivoFilter] = useState<AtivoFilter>('todos')
@@ -53,18 +55,6 @@ export function WorkersTable({ workers }: { workers: Worker[] }) {
     })
   }
 
-  function handleBulkDelete() {
-    const count = selectedIds.size
-    startTransition(async () => {
-      const result = await deleteWorkers([...selectedIds])
-      if (result.error) {
-        toast.error(result.error)
-      } else {
-        toast.success(`${count} trabalhador${count !== 1 ? 'es' : ''} eliminado${count !== 1 ? 's' : ''}`)
-        setSelectedIds(new Set())
-      }
-    })
-  }
 
   return (
     <div className="space-y-3">
@@ -76,12 +66,24 @@ export function WorkersTable({ workers }: { workers: Worker[] }) {
             className="text-slate-300 hover:text-white hover:bg-white/10 h-7 text-xs">
             Cancelar
           </Button>
-          <Button variant="destructive" size="sm" disabled={isPending} onClick={handleBulkDelete} className="h-7 text-xs">
+          <Button variant="destructive" size="sm" disabled={isPending} onClick={() => setBulkDeleteOpen(true)} className="h-7 text-xs">
             <Trash2 className="h-3.5 w-3.5 mr-1" />
-            {isPending ? 'A eliminar...' : 'Eliminar'}
+            Eliminar
           </Button>
         </div>
       )}
+
+      <ConfirmDeleteDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        description={`Apagar permanentemente ${selectedIds.size} trabalhador${selectedIds.size !== 1 ? 'es' : ''}? As suas alocações no calendário também serão eliminadas.`}
+        onConfirm={async () => {
+          const result = await deleteWorkers([...selectedIds])
+          if (!result.error) setSelectedIds(new Set())
+          return result
+        }}
+        successMessage={`${selectedIds.size} trabalhador${selectedIds.size !== 1 ? 'es' : ''} eliminado${selectedIds.size !== 1 ? 's' : ''}`}
+      />
 
       <div className="bg-white rounded-xl border overflow-hidden shadow-sm">
         <div className="px-4 py-3 border-b flex items-center gap-3 flex-wrap">

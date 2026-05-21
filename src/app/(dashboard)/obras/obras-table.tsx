@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { Trash2, MapPin, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { SiteActions } from './site-actions'
 import { deleteSites } from '@/lib/actions/sites'
 
@@ -48,6 +49,7 @@ function fmtEuros(v: number | null) {
 
 export function ObrasTable({ sites }: { sites: Site[] }) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [search, setSearch] = useState('')
   const [estadoFilter, setEstadoFilter] = useState('todos')
@@ -79,18 +81,6 @@ export function ObrasTable({ sites }: { sites: Site[] }) {
     })
   }
 
-  function handleBulkDelete() {
-    const count = selectedIds.size
-    startTransition(async () => {
-      const result = await deleteSites([...selectedIds])
-      if (result.error) {
-        toast.error(result.error)
-      } else {
-        toast.success(`${count} obra${count !== 1 ? 's' : ''} eliminada${count !== 1 ? 's' : ''}`)
-        setSelectedIds(new Set())
-      }
-    })
-  }
 
   return (
     <div className="space-y-3">
@@ -102,12 +92,24 @@ export function ObrasTable({ sites }: { sites: Site[] }) {
             className="text-slate-300 hover:text-white hover:bg-white/10 h-7 text-xs">
             Cancelar
           </Button>
-          <Button variant="destructive" size="sm" disabled={isPending} onClick={handleBulkDelete} className="h-7 text-xs">
+          <Button variant="destructive" size="sm" disabled={isPending} onClick={() => setBulkDeleteOpen(true)} className="h-7 text-xs">
             <Trash2 className="h-3.5 w-3.5 mr-1" />
-            {isPending ? 'A eliminar...' : 'Eliminar'}
+            Eliminar
           </Button>
         </div>
       )}
+
+      <ConfirmDeleteDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        description={`Apagar permanentemente ${selectedIds.size} obra${selectedIds.size !== 1 ? 's' : ''}? Todas as alocações associadas no calendário também serão eliminadas.`}
+        onConfirm={async () => {
+          const result = await deleteSites([...selectedIds])
+          if (!result.error) setSelectedIds(new Set())
+          return result
+        }}
+        successMessage={`${selectedIds.size} obra${selectedIds.size !== 1 ? 's' : ''} eliminada${selectedIds.size !== 1 ? 's' : ''}`}
+      />
 
       <div className="bg-white rounded-xl border overflow-x-auto shadow-sm">
         <div className="px-4 py-3 border-b flex items-center gap-3 flex-wrap">

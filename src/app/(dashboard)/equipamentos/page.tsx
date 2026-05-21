@@ -11,7 +11,7 @@ export default async function EquipamentosPage() {
   const { data: equipment } = await supabase
     .from('equipment')
     .select('*')
-    .order('nome')
+    .order('data_compra', { ascending: true, nullsFirst: false })
 
   const ativos = equipment?.filter(e => e.ativo).length ?? 0
 

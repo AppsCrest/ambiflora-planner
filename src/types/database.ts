@@ -69,15 +69,15 @@ export type Database = {
       equipment: {
         Row: {
           id: string; nome: string; tipo: string | null; numero_serie: string | null
-          notas: string | null; ativo: boolean; created_at: string; updated_at: string
+          data_compra: string | null; notas: string | null; ativo: boolean; created_at: string; updated_at: string
         }
         Insert: {
           id?: string; nome: string; tipo?: string | null; numero_serie?: string | null
-          notas?: string | null; ativo?: boolean
+          data_compra?: string | null; notas?: string | null; ativo?: boolean
         }
         Update: {
           id?: string; nome?: string; tipo?: string | null; numero_serie?: string | null
-          notas?: string | null; ativo?: boolean
+          data_compra?: string | null; notas?: string | null; ativo?: boolean
         }
         Relationships: []
       }

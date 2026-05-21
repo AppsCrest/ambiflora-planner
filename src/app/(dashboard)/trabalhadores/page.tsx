@@ -11,7 +11,7 @@ export default async function TrabalhadoresPage() {
   const { data: workers } = await supabase
     .from('workers')
     .select('*')
-    .order('nome')
+    .order('data_admissao', { ascending: true, nullsFirst: false })
 
   const ativos = workers?.filter(w => w.ativo).length ?? 0
 

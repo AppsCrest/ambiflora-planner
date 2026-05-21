@@ -8,6 +8,7 @@ const equipmentSchema = z.object({
   nome: z.string().min(1, 'Nome é obrigatório'),
   tipo: z.string().optional(),
   numero_serie: z.string().optional(),
+  data_compra: z.string().optional(),
   notas: z.string().optional(),
 })
 
@@ -21,6 +22,7 @@ export async function createEquipment(formData: FormData) {
     ...parsed.data,
     tipo: parsed.data.tipo || null,
     numero_serie: parsed.data.numero_serie || null,
+    data_compra: parsed.data.data_compra || null,
     notas: parsed.data.notas || null,
   }
 
@@ -41,6 +43,7 @@ export async function updateEquipment(id: string, formData: FormData) {
     ...parsed.data,
     tipo: parsed.data.tipo || null,
     numero_serie: parsed.data.numero_serie || null,
+    data_compra: parsed.data.data_compra || null,
     notas: parsed.data.notas || null,
   }
 

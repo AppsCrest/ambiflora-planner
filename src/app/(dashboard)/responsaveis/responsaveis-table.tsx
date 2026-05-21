@@ -10,10 +10,15 @@ import { deleteResponsaveis } from '@/lib/actions/responsaveis'
 
 type Responsavel = {
   id: string; nome: string; cargo: string | null
-  telefone: string | null; ativo: boolean
+  telefone: string | null; data_admissao: string | null; ativo: boolean
 }
 
 type AtivoFilter = 'todos' | 'ativos' | 'inativos'
+
+function fmtDate(d: string | null) {
+  if (!d) return '—'
+  return new Date(d + 'T00:00:00').toLocaleDateString('pt-PT')
+}
 
 export function ResponsaveisTable({ responsaveis }: { responsaveis: Responsavel[] }) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -101,24 +106,25 @@ export function ResponsaveisTable({ responsaveis }: { responsaveis: Responsavel[
         </div>
 
         <table className="w-full text-sm">
-          <thead className="bg-muted/40 border-b">
+          <thead className="bg-slate-100 border-b-2 border-slate-200">
             <tr>
               <th className="px-4 py-3 w-10">
                 <input type="checkbox" checked={allSelected}
                   ref={el => { if (el) el.indeterminate = filtered.some(r => selectedIds.has(r.id)) && !allSelected }}
                   onChange={toggleAll} className="accent-primary cursor-pointer" />
               </th>
-              <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide">Nome</th>
-              <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide hidden sm:table-cell">Cargo</th>
-              <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide hidden md:table-cell">Telefone</th>
-              <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide">Estado</th>
+              <th className="text-left px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide">Nome</th>
+              <th className="text-left px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide hidden sm:table-cell">Cargo</th>
+              <th className="text-left px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide hidden md:table-cell">Telefone</th>
+              <th className="text-left px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide hidden lg:table-cell">Admissão</th>
+              <th className="text-left px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide">Estado</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-14 text-center">
+                <td colSpan={7} className="px-4 py-14 text-center">
                   <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-3">
                     <UserCog className="h-7 w-7 text-muted-foreground/50" />
                   </div>
@@ -140,6 +146,7 @@ export function ResponsaveisTable({ responsaveis }: { responsaveis: Responsavel[
                 <td className="px-4 py-3 font-medium text-slate-900">{r.nome}</td>
                 <td className="px-4 py-3 text-slate-500 hidden sm:table-cell">{r.cargo ?? '—'}</td>
                 <td className="px-4 py-3 text-slate-500 hidden md:table-cell">{r.telefone ?? '—'}</td>
+                <td className="px-4 py-3 text-slate-500 hidden lg:table-cell">{fmtDate(r.data_admissao)}</td>
                 <td className="px-4 py-3">
                   <Badge variant={r.ativo ? 'default' : 'secondary'}>{r.ativo ? 'Ativo' : 'Inativo'}</Badge>
                 </td>

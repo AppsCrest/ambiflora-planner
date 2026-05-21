@@ -11,7 +11,7 @@ export default async function ResponsaveisPage() {
   const { data: responsaveis } = await supabase
     .from('responsaveis')
     .select('*')
-    .order('nome')
+    .order('data_admissao', { ascending: true, nullsFirst: false })
 
   const ativos = responsaveis?.filter(r => r.ativo).length ?? 0
 

@@ -11,7 +11,7 @@ export default async function ObrasPage() {
   const { data: sites } = await supabase
     .from('sites')
     .select('*, responsaveis(nome)')
-    .order('nome') as any
+    .order('data_inicio', { ascending: true, nullsFirst: false }) as any
 
   const emCurso = (sites as any[])?.filter((s: any) => s.estado === 'em_curso').length ?? 0
 

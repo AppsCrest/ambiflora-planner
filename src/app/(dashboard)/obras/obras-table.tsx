@@ -132,21 +132,21 @@ export function ObrasTable({ sites }: { sites: Site[] }) {
         </div>
 
         <table className="w-full text-sm">
-          <thead className="bg-muted/40 border-b">
+          <thead className="bg-slate-100 border-b-2 border-slate-200">
             <tr>
               <th className="px-4 py-3 w-10">
                 <input type="checkbox" checked={allSelected}
                   ref={el => { if (el) el.indeterminate = filtered.some(s => selectedIds.has(s.id)) && !allSelected }}
                   onChange={toggleAll} className="accent-primary cursor-pointer" />
               </th>
-              <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide">Nome</th>
-              <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide hidden sm:table-cell">Cliente</th>
-              <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide hidden md:table-cell">Local</th>
-              <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide hidden lg:table-cell">Início</th>
-              <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide hidden lg:table-cell">Fim</th>
-              <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide hidden xl:table-cell">Valor Esperado</th>
-              <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide hidden xl:table-cell">Responsável</th>
-              <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide">Estado</th>
+              <th className="text-left px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide">Nome</th>
+              <th className="text-left px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide hidden sm:table-cell">Cliente</th>
+              <th className="text-left px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide hidden md:table-cell">Local</th>
+              <th className="text-left px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide hidden lg:table-cell">Início</th>
+              <th className="text-left px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide hidden lg:table-cell">Fim</th>
+              <th className="text-left px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide hidden xl:table-cell">Valor Esperado</th>
+              <th className="text-left px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide hidden xl:table-cell">Responsável</th>
+              <th className="text-left px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide">Estado</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>

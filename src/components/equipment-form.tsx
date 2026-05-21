@@ -50,6 +50,11 @@ export function EquipmentForm({ equipment }: { equipment?: Equipment }) {
       </div>
 
       <div className="space-y-1.5">
+        <Label htmlFor="data_compra">Data de Compra</Label>
+        <Input id="data_compra" name="data_compra" type="date" defaultValue={equipment?.data_compra ?? ''} />
+      </div>
+
+      <div className="space-y-1.5">
         <Label htmlFor="notas">Notas</Label>
         <Textarea id="notas" name="notas" rows={3} defaultValue={equipment?.notas ?? ''} />
       </div>

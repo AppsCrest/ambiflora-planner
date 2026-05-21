@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Trash2, Users } from 'lucide-react'
+import { Trash2, Users, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -13,15 +13,31 @@ type Worker = {
   telefone: string | null; ativo: boolean
 }
 
+type AtivoFilter = 'todos' | 'ativos' | 'inativos'
+
 export function WorkersTable({ workers }: { workers: Worker[] }) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isPending, startTransition] = useTransition()
+  const [search, setSearch] = useState('')
+  const [ativoFilter, setAtivoFilter] = useState<AtivoFilter>('todos')
 
-  const allSelected = workers.length > 0 && selectedIds.size === workers.length
+  const filtered = workers.filter(w => {
+    const q = search.toLowerCase()
+    const matchSearch = !q || w.nome.toLowerCase().includes(q) || (w.cargo ?? '').toLowerCase().includes(q)
+    const matchAtivo = ativoFilter === 'todos' || (ativoFilter === 'ativos' ? w.ativo : !w.ativo)
+    return matchSearch && matchAtivo
+  })
+
+  const allSelected = filtered.length > 0 && filtered.every(w => selectedIds.has(w.id))
   const someSelected = selectedIds.size > 0
 
   function toggleAll() {
-    setSelectedIds(allSelected ? new Set() : new Set(workers.map(w => w.id)))
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (allSelected) filtered.forEach(w => next.delete(w.id))
+      else filtered.forEach(w => next.add(w.id))
+      return next
+    })
   }
 
   function toggleOne(id: string) {
@@ -63,12 +79,33 @@ export function WorkersTable({ workers }: { workers: Worker[] }) {
       )}
 
       <div className="bg-white rounded-xl border overflow-hidden shadow-sm">
+        <div className="px-4 py-3 border-b flex items-center gap-3 flex-wrap">
+          <div className="relative flex-1 min-w-48">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Pesquisar por nome ou cargo..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full pl-8 pr-3 py-1.5 text-sm bg-muted/40 rounded-lg outline-none focus:ring-1 focus:ring-primary/30 placeholder:text-muted-foreground"
+            />
+          </div>
+          <div className="flex gap-1">
+            {(['todos', 'ativos', 'inativos'] as AtivoFilter[]).map(f => (
+              <button key={f} onClick={() => setAtivoFilter(f)}
+                className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${ativoFilter === f ? 'bg-primary text-white' : 'bg-muted text-slate-500 hover:bg-muted/80'}`}>
+                {f === 'todos' ? 'Todos' : f === 'ativos' ? 'Ativos' : 'Inativos'}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <table className="w-full text-sm">
           <thead className="bg-muted/40 border-b">
             <tr>
               <th className="px-4 py-3 w-10">
                 <input type="checkbox" checked={allSelected}
-                  ref={el => { if (el) el.indeterminate = someSelected && !allSelected }}
+                  ref={el => { if (el) el.indeterminate = filtered.some(w => selectedIds.has(w.id)) && !allSelected }}
                   onChange={toggleAll} className="accent-primary cursor-pointer" />
               </th>
               <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide">Nome</th>
@@ -79,18 +116,22 @@ export function WorkersTable({ workers }: { workers: Worker[] }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {workers.length === 0 && (
+            {filtered.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-14 text-center">
                   <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-3">
                     <Users className="h-7 w-7 text-muted-foreground/50" />
                   </div>
-                  <p className="text-sm font-medium text-slate-700">Sem trabalhadores registados</p>
-                  <p className="text-xs text-muted-foreground mt-1">Adiciona manualmente ou importa um ficheiro CSV.</p>
+                  <p className="text-sm font-medium text-slate-700">
+                    {workers.length === 0 ? 'Sem trabalhadores registados' : 'Nenhum resultado encontrado'}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {workers.length === 0 ? 'Adiciona manualmente ou importa um ficheiro CSV.' : 'Tenta ajustar a pesquisa ou os filtros.'}
+                  </p>
                 </td>
               </tr>
             )}
-            {workers.map(w => (
+            {filtered.map(w => (
               <tr key={w.id} className={`hover:bg-muted/30 transition-colors ${!w.ativo ? 'opacity-50' : ''} ${selectedIds.has(w.id) ? 'bg-primary/5' : ''}`}>
                 <td className="px-4 py-3">
                   <input type="checkbox" checked={selectedIds.has(w.id)}

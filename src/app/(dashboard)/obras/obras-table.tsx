@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Trash2, MapPin } from 'lucide-react'
+import { Trash2, MapPin, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { SiteActions } from './site-actions'
@@ -28,6 +28,14 @@ const estadoClass: Record<string, string> = {
   concluida: 'bg-sky-50 text-sky-700 border border-sky-200',
 }
 
+const estadoFilterOptions = [
+  { value: 'todos', label: 'Todos' },
+  { value: 'em_curso', label: 'Em Curso' },
+  { value: 'por_comecar', label: 'Por Começar' },
+  { value: 'pausada', label: 'Em Pausa' },
+  { value: 'concluida', label: 'Concluída' },
+]
+
 function fmtDate(d: string | null) {
   if (!d) return '—'
   return new Date(d + 'T00:00:00').toLocaleDateString('pt-PT')
@@ -41,12 +49,26 @@ function fmtEuros(v: number | null) {
 export function ObrasTable({ sites }: { sites: Site[] }) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isPending, startTransition] = useTransition()
+  const [search, setSearch] = useState('')
+  const [estadoFilter, setEstadoFilter] = useState('todos')
 
-  const allSelected = sites.length > 0 && selectedIds.size === sites.length
+  const filtered = sites.filter(s => {
+    const q = search.toLowerCase()
+    const matchSearch = !q || s.nome.toLowerCase().includes(q) || (s.cliente ?? '').toLowerCase().includes(q)
+    const matchEstado = estadoFilter === 'todos' || s.estado === estadoFilter
+    return matchSearch && matchEstado
+  })
+
+  const allSelected = filtered.length > 0 && filtered.every(s => selectedIds.has(s.id))
   const someSelected = selectedIds.size > 0
 
   function toggleAll() {
-    setSelectedIds(allSelected ? new Set() : new Set(sites.map(s => s.id)))
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (allSelected) filtered.forEach(s => next.delete(s.id))
+      else filtered.forEach(s => next.add(s.id))
+      return next
+    })
   }
 
   function toggleOne(id: string) {
@@ -88,12 +110,33 @@ export function ObrasTable({ sites }: { sites: Site[] }) {
       )}
 
       <div className="bg-white rounded-xl border overflow-x-auto shadow-sm">
+        <div className="px-4 py-3 border-b flex items-center gap-3 flex-wrap">
+          <div className="relative flex-1 min-w-48">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Pesquisar por nome ou cliente..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full pl-8 pr-3 py-1.5 text-sm bg-muted/40 rounded-lg outline-none focus:ring-1 focus:ring-primary/30 placeholder:text-muted-foreground"
+            />
+          </div>
+          <div className="flex gap-1 flex-wrap">
+            {estadoFilterOptions.map(opt => (
+              <button key={opt.value} onClick={() => setEstadoFilter(opt.value)}
+                className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${estadoFilter === opt.value ? 'bg-primary text-white' : 'bg-muted text-slate-500 hover:bg-muted/80'}`}>
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <table className="w-full text-sm">
           <thead className="bg-muted/40 border-b">
             <tr>
               <th className="px-4 py-3 w-10">
                 <input type="checkbox" checked={allSelected}
-                  ref={el => { if (el) el.indeterminate = someSelected && !allSelected }}
+                  ref={el => { if (el) el.indeterminate = filtered.some(s => selectedIds.has(s.id)) && !allSelected }}
                   onChange={toggleAll} className="accent-primary cursor-pointer" />
               </th>
               <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide">Nome</th>
@@ -108,18 +151,22 @@ export function ObrasTable({ sites }: { sites: Site[] }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {sites.length === 0 && (
+            {filtered.length === 0 && (
               <tr>
                 <td colSpan={10} className="px-4 py-14 text-center">
                   <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-3">
                     <MapPin className="h-7 w-7 text-muted-foreground/50" />
                   </div>
-                  <p className="text-sm font-medium text-slate-700">Sem obras registadas</p>
-                  <p className="text-xs text-muted-foreground mt-1">Adiciona as obras onde as equipas vão ser alocadas.</p>
+                  <p className="text-sm font-medium text-slate-700">
+                    {sites.length === 0 ? 'Sem obras registadas' : 'Nenhum resultado encontrado'}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {sites.length === 0 ? 'Adiciona as obras onde as equipas vão ser alocadas.' : 'Tenta ajustar a pesquisa ou os filtros.'}
+                  </p>
                 </td>
               </tr>
             )}
-            {sites.map(s => (
+            {filtered.map(s => (
               <tr key={s.id} className={`hover:bg-muted/30 transition-colors ${selectedIds.has(s.id) ? 'bg-primary/5' : ''}`}>
                 <td className="px-4 py-3">
                   <input type="checkbox" checked={selectedIds.has(s.id)}

@@ -381,6 +381,7 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
         equipment={equipment}
         workers={workers}
         existingAssignments={assignments}
+        teamMembers={teamMembers}
       />
 
       {/* Modal editar bloco */}
@@ -392,6 +393,7 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
         equipment={equipment}
         workers={workers}
         existingAssignments={assignments}
+        teamMembers={teamMembers}
         editBlock={blockToEdit}
       />
 

@@ -79,10 +79,11 @@ interface Props {
   equipment: { id: string; nome: string }[]
   workers: { id: string; nome: string }[]
   existingAssignments: Assignment[]
+  teamMembers: { team_id: string; worker_id: string }[]
   editBlock?: EditBlockData | null
 }
 
-export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipment, workers, existingAssignments, editBlock }: Props) {
+export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipment, workers, existingAssignments, teamMembers, editBlock }: Props) {
   const today = new Date().toISOString().split('T')[0]
 
   const [mode, setMode] = useState<'equipa' | 'trabalhador'>('equipa')
@@ -144,15 +145,41 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
   const conflicts: ConflictInfo[] = useMemo(() => {
     if (!activeId) return []
     const excludeIds = new Set(editBlock?.ids ?? [])
+    const workerToTeams = new Map<string, Set<string>>()
+    const teamToWorkers = new Map<string, Set<string>>()
+    for (const m of teamMembers) {
+      if (!workerToTeams.has(m.worker_id)) workerToTeams.set(m.worker_id, new Set())
+      workerToTeams.get(m.worker_id)!.add(m.team_id)
+      if (!teamToWorkers.has(m.team_id)) teamToWorkers.set(m.team_id, new Set())
+      teamToWorkers.get(m.team_id)!.add(m.worker_id)
+    }
     return periods.flatMap(p => {
-      const existing = existingAssignments.find(a =>
-        !excludeIds.has(a.id) &&
-        a.data === p.data && a.periodo === p.periodo &&
-        (mode === 'equipa' ? a.team_id === activeId : a.worker_id === activeId)
+      const slotAssignments = existingAssignments.filter(a =>
+        !excludeIds.has(a.id) && a.data === p.data && a.periodo === p.periodo
       )
-      return existing ? [{ ...p, existingSiteName: existing.sites?.nome ?? '?' }] : []
+      let conflictSite: string | undefined
+      if (mode === 'equipa') {
+        const directHit = slotAssignments.find(a => a.team_id === activeId)
+        if (directHit) {
+          conflictSite = directHit.sites?.nome ?? '?'
+        } else {
+          const members = teamToWorkers.get(activeId) ?? new Set()
+          const crossHit = members.size > 0 ? slotAssignments.find(a => a.worker_id != null && members.has(a.worker_id)) : undefined
+          if (crossHit) conflictSite = crossHit.sites?.nome ?? '?'
+        }
+      } else {
+        const directHit = slotAssignments.find(a => a.worker_id === activeId)
+        if (directHit) {
+          conflictSite = directHit.sites?.nome ?? '?'
+        } else {
+          const myTeams = workerToTeams.get(activeId) ?? new Set()
+          const crossHit = myTeams.size > 0 ? slotAssignments.find(a => a.team_id != null && myTeams.has(a.team_id)) : undefined
+          if (crossHit) conflictSite = crossHit.sites?.nome ?? '?'
+        }
+      }
+      return conflictSite ? [{ ...p, existingSiteName: conflictSite }] : []
     })
-  }, [periods, activeId, mode, existingAssignments, editBlock])
+  }, [periods, activeId, mode, existingAssignments, editBlock, teamMembers])
 
   const periodsToCreate = useMemo(() => {
     const keys = new Set(conflicts.map(c => `${c.data}|${c.periodo}`))

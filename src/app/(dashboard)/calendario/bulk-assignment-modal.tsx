@@ -175,6 +175,7 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
   }
 
   function handleVerificar() {
+    if (isPending) return
     if (!siteId) { toast.error('Escolhe a obra'); return }
     if (mode === 'equipa' && !teamId) { toast.error('Escolhe a equipa'); return }
     if (mode === 'trabalhador' && !workerId) { toast.error('Escolhe o trabalhador'); return }
@@ -206,7 +207,7 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
   }
 
   function handleDeleteBlock() {
-    if (!editBlock) return
+    if (isPending || !editBlock) return
     startTransition(async () => {
       await deleteAssignments(editBlock.ids)
       toast.success('Bloco eliminado')

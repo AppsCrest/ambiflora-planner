@@ -84,6 +84,7 @@ export function AssignmentModal({
   }
 
   function handleSubmit() {
+    if (isPending) return
     if (!selectedCell || !siteId) {
       toast.error('Escolhe a obra')
       return
@@ -119,7 +120,7 @@ export function AssignmentModal({
   }
 
   function handleDelete() {
-    if (!selectedAssignment) return
+    if (isPending || !selectedAssignment) return
     startTransition(async () => {
       const result = await deleteAssignment(selectedAssignment.id)
       if (result.error) {

@@ -193,8 +193,26 @@ export function RelatoriosClient({ workers, teams, sites, equipment }: Props) {
 </body>
 </html>`
 
-    const win = window.open('', '_blank', 'width=900,height=700')
-    if (win) { win.document.write(html); win.document.close() }
+    const htmlForPrint = html.replace(/<script>[\s\S]*?<\/script>/, '')
+    const blob = new Blob([htmlForPrint], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const iframe = document.createElement('iframe')
+    iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:0;height:0'
+    document.body.appendChild(iframe)
+    iframe.onload = () => {
+      iframe.contentWindow?.focus()
+      iframe.contentWindow?.print()
+      let cleaned = false
+      const cleanup = () => {
+        if (cleaned) return
+        cleaned = true
+        document.body.removeChild(iframe)
+        URL.revokeObjectURL(url)
+      }
+      iframe.contentWindow?.addEventListener('afterprint', cleanup, { once: true } as EventListenerOptions)
+      setTimeout(cleanup, 60000)
+    }
+    iframe.src = url
   }
 
   return (

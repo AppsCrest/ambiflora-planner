@@ -31,7 +31,7 @@ export default async function CalendarioPage({
       .gte('data', startDate)
       .lte('data', endDate),
     supabase.from('teams').select('id, nome, cor').eq('ativo', true).order('nome'),
-    supabase.from('sites').select('id, nome').neq('estado', 'concluida').order('nome'),
+    supabase.from('sites').select('id, nome').in('estado', ['por_comecar', 'em_curso']).order('nome'),
     supabase.from('workers').select('id, nome').eq('ativo', true).order('nome'),
     supabase.from('equipment').select('id, nome').eq('ativo', true).order('nome'),
     supabase.from('team_members').select('team_id, worker_id').is('data_fim', null),

@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   title: "Ambiflora — Planeamento",
   description: "Planeamento de equipas, equipamentos e obras",
   icons: {
-    apple: '/apple-icon',
+    apple: '/apple-touch-icon.png',
   },
 };
 

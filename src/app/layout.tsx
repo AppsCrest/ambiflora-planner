@@ -11,9 +11,6 @@ const font = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: "Ambiflora — Planeamento",
   description: "Planeamento de equipas, equipamentos e obras",
-  icons: {
-    apple: '/apple-touch-icon.png',
-  },
 };
 
 export default function RootLayout({
@@ -23,6 +20,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt" className={`${font.variable} h-full antialiased`}>
+      <head>
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+      </head>
       <body className="min-h-full flex flex-col bg-background">{children}</body>
     </html>
   );

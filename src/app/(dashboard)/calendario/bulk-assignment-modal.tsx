@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useMemo, useTransition, useEffect } from 'react'
-import { AlertTriangle, Loader2, ChevronLeft, Trash2 } from 'lucide-react'
+import { useState, useMemo, useTransition, useEffect, useRef } from 'react'
+import { AlertTriangle, Loader2, ChevronLeft, Trash2, CalendarDays } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose,
@@ -115,6 +115,8 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
   const [notas, setNotas] = useState('')
   const [equipmentIds, setEquipmentIds] = useState<string[]>([])
   const [includeWeekends, setIncludeWeekends] = useState(false)
+  const startDateRef = useRef<HTMLInputElement>(null)
+  const endDateRef = useRef<HTMLInputElement>(null)
   const [step, setStep] = useState<'form' | 'confirm'>('form')
   const [isPending, startTransition] = useTransition()
 
@@ -291,16 +293,38 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Data de início</Label>
-                <Input
-                  type="text"
-                  placeholder="DD-MM-AAAA"
-                  value={startDateDisplay}
-                  onChange={e => {
-                    setStartDateDisplay(e.target.value)
-                    const iso = parseDMY(e.target.value)
-                    if (iso) setStartDate(iso)
-                  }}
-                />
+                <div className="relative">
+                  <Input
+                    type="text"
+                    placeholder="DD-MM-AAAA"
+                    value={startDateDisplay}
+                    onChange={e => {
+                      setStartDateDisplay(e.target.value)
+                      const iso = parseDMY(e.target.value)
+                      if (iso) setStartDate(iso)
+                    }}
+                    className="pr-8"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => startDateRef.current?.showPicker?.()}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <CalendarDays className="h-4 w-4" />
+                  </button>
+                  <input
+                    ref={startDateRef}
+                    type="date"
+                    value={startDate}
+                    className="sr-only"
+                    onChange={e => {
+                      if (e.target.value) {
+                        setStartDate(e.target.value)
+                        setStartDateDisplay(toDMY(e.target.value))
+                      }
+                    }}
+                  />
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label>Período</Label>
@@ -316,16 +340,38 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
               </div>
               <div className="space-y-1.5">
                 <Label>Data de fim</Label>
-                <Input
-                  type="text"
-                  placeholder="DD-MM-AAAA"
-                  value={endDateDisplay}
-                  onChange={e => {
-                    setEndDateDisplay(e.target.value)
-                    const iso = parseDMY(e.target.value)
-                    if (iso) setEndDate(iso)
-                  }}
-                />
+                <div className="relative">
+                  <Input
+                    type="text"
+                    placeholder="DD-MM-AAAA"
+                    value={endDateDisplay}
+                    onChange={e => {
+                      setEndDateDisplay(e.target.value)
+                      const iso = parseDMY(e.target.value)
+                      if (iso) setEndDate(iso)
+                    }}
+                    className="pr-8"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => endDateRef.current?.showPicker?.()}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <CalendarDays className="h-4 w-4" />
+                  </button>
+                  <input
+                    ref={endDateRef}
+                    type="date"
+                    value={endDate}
+                    className="sr-only"
+                    onChange={e => {
+                      if (e.target.value) {
+                        setEndDate(e.target.value)
+                        setEndDateDisplay(toDMY(e.target.value))
+                      }
+                    }}
+                  />
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label>Período</Label>

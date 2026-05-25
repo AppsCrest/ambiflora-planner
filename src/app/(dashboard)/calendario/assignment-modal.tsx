@@ -28,7 +28,7 @@ interface Props {
 
 function formatDatePT(dateStr: string) {
   const [y, m, d] = dateStr.split('-')
-  return `${d}/${m}/${y}`
+  return `${d}-${m}-${y}`
 }
 
 export function AssignmentModal({

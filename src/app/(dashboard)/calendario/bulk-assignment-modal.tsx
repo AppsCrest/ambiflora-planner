@@ -18,7 +18,7 @@ const PERIODO_LABEL: Record<'manha' | 'tarde', string> = { manha: 'Manhã', tard
 
 function formatDatePT(d: string) {
   const [y, m, day] = d.split('-')
-  return `${day}/${m}/${y}`
+  return `${day}-${m}-${y}`
 }
 
 function localDateStr(date: Date): string {

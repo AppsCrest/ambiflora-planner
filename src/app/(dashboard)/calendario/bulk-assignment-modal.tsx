@@ -69,6 +69,7 @@ export interface EditBlockData {
   siteId: string
   notas: string
   equipmentIds: string[]
+  includeWeekends: boolean
 }
 
 interface Props {
@@ -96,6 +97,7 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
   const [siteId, setSiteId] = useState('')
   const [notas, setNotas] = useState('')
   const [equipmentIds, setEquipmentIds] = useState<string[]>([])
+  const [includeWeekends, setIncludeWeekends] = useState(false)
   const [step, setStep] = useState<'form' | 'confirm'>('form')
   const [isPending, startTransition] = useTransition()
 
@@ -111,6 +113,7 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
       setSiteId(editBlock.siteId)
       setNotas(editBlock.notas)
       setEquipmentIds(editBlock.equipmentIds)
+      setIncludeWeekends(editBlock.includeWeekends)
       setStep('form')
     }
   }, [open, editBlock])
@@ -127,6 +130,7 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
     setSiteId('')
     setNotas('')
     setEquipmentIds([])
+    setIncludeWeekends(false)
     setStep('form')
   }
 
@@ -135,10 +139,15 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
     onOpenChange(o)
   }
 
-  const periods = useMemo(
-    () => generatePeriods(startDate, startPeriodo, endDate, endPeriodo),
-    [startDate, startPeriodo, endDate, endPeriodo]
-  )
+  const periods = useMemo(() => {
+    const all = generatePeriods(startDate, startPeriodo, endDate, endPeriodo)
+    if (includeWeekends) return all
+    return all.filter(p => {
+      const [y, m, d] = p.data.split('-').map(Number)
+      const dow = new Date(y, m - 1, d).getDay()
+      return dow !== 0 && dow !== 6
+    })
+  }, [startDate, startPeriodo, endDate, endPeriodo, includeWeekends])
 
   const activeId = mode === 'equipa' ? teamId : workerId
 
@@ -292,6 +301,17 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
                 </Select>
               </div>
             </div>
+
+            {/* Fins de semana */}
+            <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none w-fit">
+              <input
+                type="checkbox"
+                checked={includeWeekends}
+                onChange={e => setIncludeWeekends(e.target.checked)}
+                className="accent-primary cursor-pointer"
+              />
+              Incluir fins de semana
+            </label>
 
             {/* Toggle Equipa / Trabalhador */}
             <div className="flex rounded-lg border overflow-hidden text-sm">

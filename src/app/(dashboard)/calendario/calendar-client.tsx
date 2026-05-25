@@ -29,7 +29,13 @@ function areConsecutive(a: Assignment, b: Assignment): boolean {
   if (a.periodo === 'manha') return b.data === a.data && b.periodo === 'tarde'
   const [y, m, d] = a.data.split('-').map(Number)
   const next = new Date(y, m - 1, d + 1)
-  return b.data === localDateStr(next) && b.periodo === 'manha'
+  if (b.data === localDateStr(next) && b.periodo === 'manha') return true
+  // Friday afternoon → Monday morning (weekend-skipping blocks)
+  if (new Date(y, m - 1, d).getDay() === 5) {
+    const monday = new Date(y, m - 1, d + 3)
+    return b.data === localDateStr(monday) && b.periodo === 'manha'
+  }
+  return false
 }
 
 function detectBlock(clicked: Assignment, all: Assignment[]): Assignment[] {
@@ -181,6 +187,11 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
     })
     const first = sorted[0]
     const last = sorted[sorted.length - 1]
+    const hasWeekends = block.some(x => {
+      const [y, m, d] = x.data.split('-').map(Number)
+      const dow = new Date(y, m - 1, d).getDay()
+      return dow === 0 || dow === 6
+    })
     setBlockToEdit({
       ids: sorted.map(x => x.id),
       startDate: first.data,
@@ -193,6 +204,7 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
       siteId: a.site_id,
       notas: a.notas ?? '',
       equipmentIds: a.assignment_equipment.map(e => e.equipment_id),
+      includeWeekends: hasWeekends,
     })
     setBlockEditOpen(true)
   }

@@ -1,0 +1,6 @@
+nome,cliente,morada,estado,data_inicio,data_fim_prevista,valor,notas
+Jardim Quinta do Vale,Família Mendonça,"Rua do Vale 45, Sintra",em_curso,2026-02-01,2026-07-31,18500,Manutenção semanal incluída
+Parque Empresarial Taguspark,Taguspark S.A.,Oeiras,em_curso,2026-01-15,2026-12-31,45000,Contrato anual de manutenção
+Jardim Residencial Torre Verde,Condomínio Torre Verde,"Av. da Liberdade 120, Lisboa",em_curso,2026-03-10,2026-06-30,8200,
+Requalificação Parque Municipal,Câmara Municipal de Cascais,Cascais,em_curso,2026-03-01,2026-09-30,32000,
+Manutenção Hotel Palácio,Hotel Palácio Estoril,Estoril,em_curso,2026-01-01,2026-12-31,28000,Contrato renovável anualmente

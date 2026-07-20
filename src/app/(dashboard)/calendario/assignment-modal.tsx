@@ -22,6 +22,7 @@ interface Props {
   teams: { id: string; nome: string; cor: string }[]
   sites: { id: string; nome: string }[]
   equipment: { id: string; nome: string }[]
+  prestadores: { id: string; nome: string }[]
   workers: { id: string; nome: string }[]
   existingAssignments: Assignment[]
 }
@@ -33,24 +34,28 @@ function formatDatePT(dateStr: string) {
 
 export function AssignmentModal({
   open, onOpenChange, selectedCell,
-  teams, sites, equipment, workers, existingAssignments,
+  teams, sites, equipment, prestadores, workers, existingAssignments,
 }: Props) {
   const [isPending, startTransition] = useTransition()
-  const [mode, setMode] = useState<'equipa' | 'trabalhador'>('equipa')
+  const [mode, setMode] = useState<'equipa' | 'trabalhador' | 'prestador'>('equipa')
   const [teamId, setTeamId] = useState('')
   const [workerId, setWorkerId] = useState('')
+  const [prestadorId, setPrestadorId] = useState('')
   const [siteId, setSiteId] = useState('')
   const [notas, setNotas] = useState('')
   const [equipmentIds, setEquipmentIds] = useState<string[]>([])
+  const [prestadorIds, setPrestadorIds] = useState<string[]>([])
 
   useEffect(() => {
     if (open) {
       setMode('equipa')
       setTeamId('')
       setWorkerId('')
+      setPrestadorId('')
       setSiteId('')
       setNotas('')
       setEquipmentIds([])
+      setPrestadorIds([])
     }
   }, [open])
 
@@ -62,6 +67,7 @@ export function AssignmentModal({
 
   const occupiedTeamIds = new Set(conflictingAssignments.map(a => a.team_id).filter(Boolean))
   const occupiedWorkerIds = new Set(conflictingAssignments.map(a => a.worker_id).filter(Boolean))
+  const occupiedPrestadorIds = new Set(conflictingAssignments.map(a => a.prestador_id).filter(Boolean))
   const occupiedEquipmentIds = new Set(
     conflictingAssignments.flatMap(a => a.assignment_equipment.map(e => e.equipment_id))
   )
@@ -74,8 +80,16 @@ export function AssignmentModal({
     ? conflictingAssignments.find(a => a.worker_id === workerId)
     : null
 
+  const prestadorConflict = mode === 'prestador' && prestadorId && occupiedPrestadorIds.has(prestadorId)
+    ? conflictingAssignments.find(a => a.prestador_id === prestadorId)
+    : null
+
   function toggleEquipment(id: string) {
     setEquipmentIds(prev => prev.includes(id) ? prev.filter(e => e !== id) : [...prev, id])
+  }
+
+  function togglePrestador(id: string) {
+    setPrestadorIds(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id])
   }
 
   function handleSubmit() {
@@ -86,6 +100,7 @@ export function AssignmentModal({
     }
     if (mode === 'equipa' && !teamId) { toast.error('Escolhe a equipa'); return }
     if (mode === 'trabalhador' && !workerId) { toast.error('Escolhe o trabalhador'); return }
+    if (mode === 'prestador' && !prestadorId) { toast.error('Escolhe o prestador'); return }
     if (teamConflict) {
       toast.error(`Esta equipa já está alocada à obra "${teamConflict.sites?.nome}" neste período`)
       return
@@ -100,9 +115,11 @@ export function AssignmentModal({
         periodo: selectedCell.periodo,
         team_id: mode === 'equipa' ? teamId : null,
         worker_id: mode === 'trabalhador' ? workerId : null,
+        prestador_id: mode === 'prestador' ? prestadorId : null,
         site_id: siteId,
         notas,
         equipment_ids: equipmentIds,
+        prestador_ids: prestadorIds,
       })
       if (result.error) {
         toast.error(result.error)
@@ -123,6 +140,8 @@ export function AssignmentModal({
     ? `Este trabalhador já está alocado à obra "${workerConflict.sites?.nome}" neste período.`
     : equipmentConflict
     ? 'Um ou mais equipamentos selecionados já estão alocados neste período.'
+    : prestadorConflict
+    ? `Este prestador já está alocado à obra "${prestadorConflict.sites?.nome}" neste período. Podes continuar, mas confirma que é intencional.`
     : null
 
   return (
@@ -136,7 +155,7 @@ export function AssignmentModal({
         </DialogHeader>
 
         <div className="space-y-3 py-1">
-          {/* Toggle Equipa / Trabalhador */}
+          {/* Toggle Equipa / Trabalhador / Prestador de Serviço */}
           <div className="flex rounded-lg border overflow-hidden text-sm">
             <button
               type="button"
@@ -152,9 +171,16 @@ export function AssignmentModal({
             >
               Trabalhador
             </button>
+            <button
+              type="button"
+              onClick={() => setMode('prestador')}
+              className={`flex-1 py-1.5 font-medium transition-colors border-l ${mode === 'prestador' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/50 text-slate-600'}`}
+            >
+              Prestador de Serviço
+            </button>
           </div>
 
-          {/* Equipa ou Trabalhador */}
+          {/* Equipa, Trabalhador ou Prestador de Serviço */}
           {mode === 'equipa' ? (
             <div className="space-y-1">
               <Label>Equipa *</Label>
@@ -180,7 +206,7 @@ export function AssignmentModal({
                 </SelectContent>
               </Select>
             </div>
-          ) : (
+          ) : mode === 'trabalhador' ? (
             <div className="space-y-1">
               <Label>Trabalhador *</Label>
               <Select value={workerId} onValueChange={v => setWorkerId(v ?? '')}>
@@ -196,6 +222,28 @@ export function AssignmentModal({
                       <SelectItem key={w.id} value={w.id} disabled={occupied}>
                         {w.nome}
                         {occupied && <span className="text-xs text-red-500 ml-1">Ocupado</span>}
+                      </SelectItem>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              <Label>Prestador de Serviço *</Label>
+              <Select value={prestadorId} onValueChange={v => setPrestadorId(v ?? '')}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Escolher prestador...">
+                    {prestadorId ? prestadores.find(p => p.id === prestadorId)?.nome : null}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {prestadores.map(p => {
+                    const occupied = occupiedPrestadorIds.has(p.id)
+                    return (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.nome}
+                        {occupied && <span className="text-xs text-amber-600 ml-1">Já alocado</span>}
                       </SelectItem>
                     )
                   })}
@@ -270,6 +318,39 @@ export function AssignmentModal({
             )}
           </div>
 
+          {/* Prestadores de Serviços */}
+          <div className="space-y-1">
+            <Label>Prestadores de Serviços</Label>
+            {prestadores.length === 0 ? (
+              <p className="text-xs text-gray-400 py-1">
+                Nenhum prestador registado.{' '}
+                <a href="/prestadores/novo" className="underline text-primary">Adicionar prestador</a>
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 gap-1.5 max-h-36 overflow-y-auto pr-1">
+                {prestadores.map(p => {
+                  const checked = prestadorIds.includes(p.id)
+                  return (
+                    <label
+                      key={p.id}
+                      className={`flex items-center gap-2 text-sm rounded-md border px-2 py-1.5 cursor-pointer transition-colors ${
+                        checked ? 'border-primary bg-primary/5 text-primary' : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => togglePrestador(p.id)}
+                        className="accent-primary"
+                      />
+                      <span className="truncate">{p.nome}</span>
+                    </label>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
           {/* Notas */}
           <div className="space-y-1">
             <Label>Notas</Label>
@@ -281,7 +362,7 @@ export function AssignmentModal({
           <DialogClose render={<Button variant="outline" size="sm" />}>Cancelar</DialogClose>
           <Button
             size="sm"
-            disabled={isPending || !siteId || (mode === 'equipa' ? !teamId : !workerId) || hasConflict}
+            disabled={isPending || !siteId || (mode === 'equipa' ? !teamId : mode === 'trabalhador' ? !workerId : !prestadorId) || hasConflict}
             onClick={handleSubmit}
           >
             {isPending ? 'A guardar...' : 'Criar Alocação'}

@@ -65,6 +65,14 @@ export async function togglePrestadorAtivo(id: string, ativo: boolean) {
 export async function deletePrestador(id: string) {
   const supabase = await createClient()
   await supabase.from('obra_prestadores').delete().eq('prestador_id', id)
+  await supabase.from('assignment_prestadores').delete().eq('prestador_id', id)
+  const { data: prestadorAssignments } = await supabase.from('assignments').select('id').eq('prestador_id', id)
+  if (prestadorAssignments && prestadorAssignments.length > 0) {
+    const aIds = prestadorAssignments.map(a => a.id)
+    await supabase.from('assignment_equipment').delete().in('assignment_id', aIds)
+    await supabase.from('assignment_prestadores').delete().in('assignment_id', aIds)
+    await supabase.from('assignments').delete().in('id', aIds)
+  }
   const { error } = await supabase.from('prestadores_servicos').delete().eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/prestadores')
@@ -75,6 +83,14 @@ export async function deletePrestadoresBulk(ids: string[]) {
   if (ids.length === 0) return { success: true }
   const supabase = await createClient()
   await supabase.from('obra_prestadores').delete().in('prestador_id', ids)
+  await supabase.from('assignment_prestadores').delete().in('prestador_id', ids)
+  const { data: prestadorAssignments } = await supabase.from('assignments').select('id').in('prestador_id', ids)
+  if (prestadorAssignments && prestadorAssignments.length > 0) {
+    const aIds = prestadorAssignments.map(a => a.id)
+    await supabase.from('assignment_equipment').delete().in('assignment_id', aIds)
+    await supabase.from('assignment_prestadores').delete().in('assignment_id', aIds)
+    await supabase.from('assignments').delete().in('id', aIds)
+  }
   const { error } = await supabase.from('prestadores_servicos').delete().in('id', ids)
   if (error) return { error: error.message }
   revalidatePath('/prestadores')

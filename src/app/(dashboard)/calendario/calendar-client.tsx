@@ -39,10 +39,14 @@ function areConsecutive(a: Assignment, b: Assignment): boolean {
 }
 
 function detectBlock(clicked: Assignment, all: Assignment[]): Assignment[] {
-  if (!clicked.team_id && !clicked.worker_id) return [clicked]
+  if (!clicked.team_id && !clicked.worker_id && !clicked.prestador_id) return [clicked]
   const related = all
     .filter(a =>
-      (clicked.team_id ? a.team_id === clicked.team_id : a.worker_id === clicked.worker_id) &&
+      (clicked.team_id
+        ? a.team_id === clicked.team_id
+        : clicked.worker_id
+        ? a.worker_id === clicked.worker_id
+        : a.prestador_id === clicked.prestador_id) &&
       a.site_id === clicked.site_id
     )
     .sort((a, b) => {
@@ -64,12 +68,15 @@ export type Assignment = {
   periodo: 'manha' | 'tarde'
   team_id: string | null
   worker_id: string | null
+  prestador_id: string | null
   site_id: string
   notas: string | null
   teams: { id: string; nome: string; cor: string } | null
   workers: { id: string; nome: string } | null
+  prestadores_servicos: { id: string; nome: string } | null
   sites: { id: string; nome: string } | null
   assignment_equipment: { equipment_id: string }[]
+  assignment_prestadores: { prestador_id: string }[]
 }
 
 export type SelectedCell = {
@@ -85,15 +92,17 @@ interface Props {
   sites: { id: string; nome: string }[]
   workers: { id: string; nome: string }[]
   equipment: { id: string; nome: string }[]
+  prestadores: { id: string; nome: string }[]
   teamMembers: { team_id: string; worker_id: string }[]
 }
 
-export function CalendarClient({ ano, mes, assignments, teams, sites, workers, equipment, teamMembers }: Props) {
+export function CalendarClient({ ano, mes, assignments, teams, sites, workers, equipment, prestadores, teamMembers }: Props) {
   const router = useRouter()
   const [filterTeam, setFilterTeam] = useState<string>('')
   const [filterSite, setFilterSite] = useState<string>('')
   const [filterWorker, setFilterWorker] = useState<string>('')
   const [filterEquipment, setFilterEquipment] = useState<string>('')
+  const [filterPrestador, setFilterPrestador] = useState<string>('')
   const [selectedCell, setSelectedCell] = useState<SelectedCell | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [bulkModalOpen, setBulkModalOpen] = useState(false)
@@ -106,6 +115,7 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
       .channel('calendar-rt')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'assignments' }, () => router.refresh())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'assignment_equipment' }, () => router.refresh())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'assignment_prestadores' }, () => router.refresh())
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [router])
@@ -132,9 +142,14 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
       if (filterEquipment) {
         if (!a.assignment_equipment.some(e => e.equipment_id === filterEquipment)) return false
       }
+      if (filterPrestador) {
+        const matchesPrimary = a.prestador_id === filterPrestador
+        const matchesTag = a.assignment_prestadores.some(p => p.prestador_id === filterPrestador)
+        if (!matchesPrimary && !matchesTag) return false
+      }
       return true
     })
-  }, [assignments, filterTeam, filterSite, filterWorker, filterEquipment, workerTeams])
+  }, [assignments, filterTeam, filterSite, filterWorker, filterEquipment, filterPrestador, workerTeams])
 
   const weeks = useMemo(() => {
     const firstDay = new Date(ano, mes - 1, 1)
@@ -167,8 +182,8 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
     return filteredAssignments
       .filter(a => a.data === dateStr && a.periodo === periodo)
       .sort((a, b) => {
-        const aName = a.teams?.nome ?? a.workers?.nome ?? ''
-        const bName = b.teams?.nome ?? b.workers?.nome ?? ''
+        const aName = a.teams?.nome ?? a.workers?.nome ?? a.prestadores_servicos?.nome ?? ''
+        const bName = b.teams?.nome ?? b.workers?.nome ?? b.prestadores_servicos?.nome ?? ''
         const cmp = aName.localeCompare(bName, 'pt')
         return cmp !== 0 ? cmp : (a.sites?.nome ?? '').localeCompare(b.sites?.nome ?? '', 'pt')
       })
@@ -198,12 +213,14 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
       startPeriodo: first.periodo,
       endDate: last.data,
       endPeriodo: last.periodo,
-      mode: a.team_id ? 'equipa' : 'trabalhador',
+      mode: a.team_id ? 'equipa' : a.worker_id ? 'trabalhador' : 'prestador',
       teamId: a.team_id ?? '',
       workerId: a.worker_id ?? '',
+      prestadorId: a.prestador_id ?? '',
       siteId: a.site_id,
       notas: a.notas ?? '',
       equipmentIds: a.assignment_equipment.map(e => e.equipment_id),
+      prestadorIds: a.assignment_prestadores.map(p => p.prestador_id),
       includeWeekends: hasWeekends,
     })
     setBlockEditOpen(true)
@@ -213,7 +230,7 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
   const isToday = (day: number) =>
     day === today.getDate() && mes === today.getMonth() + 1 && ano === today.getFullYear()
 
-  const hasActiveFilter = filterTeam || filterSite || filterWorker || filterEquipment
+  const hasActiveFilter = filterTeam || filterSite || filterWorker || filterEquipment || filterPrestador
 
   return (
     <div className="space-y-4">
@@ -289,9 +306,20 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
             {equipment.map(e => <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>)}
           </SelectContent>
         </Select>
+        <Select value={filterPrestador || ''} onValueChange={(v) => setFilterPrestador(v ?? '')}>
+          <SelectTrigger className="w-40 h-7 text-xs">
+            <SelectValue placeholder="Prestador de Serviço">
+              {filterPrestador ? prestadores.find(p => p.id === filterPrestador)?.nome : null}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">Todos os prestadores</SelectItem>
+            {prestadores.map(p => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}
+          </SelectContent>
+        </Select>
         {hasActiveFilter && (
           <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => {
-            setFilterTeam(''); setFilterSite(''); setFilterWorker(''); setFilterEquipment('')
+            setFilterTeam(''); setFilterSite(''); setFilterWorker(''); setFilterEquipment(''); setFilterPrestador('')
           }}>
             Limpar filtros
           </Button>
@@ -351,10 +379,10 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
                                   key={a.id}
                                   onClick={e => { e.stopPropagation(); openEditBlock(a) }}
                                   className="w-full text-left text-[10px] font-medium rounded px-1 py-0.5 text-white hover:opacity-80 transition-opacity"
-                                  style={{ backgroundColor: a.teams?.cor ?? workerColor(a.worker_id ?? a.id) }}
-                                  title={`${a.teams?.nome ?? a.workers?.nome} — ${a.sites?.nome}`}
+                                  style={{ backgroundColor: a.teams?.cor ?? workerColor(a.worker_id ?? a.prestador_id ?? a.id) }}
+                                  title={`${a.teams?.nome ?? a.workers?.nome ?? a.prestadores_servicos?.nome} — ${a.sites?.nome}`}
                                 >
-                                  <div className="truncate">{a.teams?.nome ?? a.workers?.nome}</div>
+                                  <div className="truncate">{a.teams?.nome ?? a.workers?.nome ?? a.prestadores_servicos?.nome}</div>
                                   {a.sites?.nome && <div className="truncate opacity-75 font-normal">{a.sites.nome}</div>}
                                 </button>
                               ))}
@@ -391,6 +419,7 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
         teams={teams}
         sites={sites}
         equipment={equipment}
+        prestadores={prestadores}
         workers={workers}
         existingAssignments={assignments}
         teamMembers={teamMembers}
@@ -403,6 +432,7 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
         teams={teams}
         sites={sites}
         equipment={equipment}
+        prestadores={prestadores}
         workers={workers}
         existingAssignments={assignments}
         teamMembers={teamMembers}
@@ -417,6 +447,7 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
         teams={teams}
         sites={sites}
         equipment={equipment}
+        prestadores={prestadores}
         workers={workers}
         existingAssignments={assignments}
       />

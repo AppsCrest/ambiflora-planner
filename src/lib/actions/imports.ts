@@ -81,6 +81,27 @@ export async function bulkImportEquipment(rows: Row[]): Promise<{ created: numbe
   return { created, errors }
 }
 
+export async function bulkImportPrestadores(rows: Row[]): Promise<{ created: number; errors: number }> {
+  const supabase = await createClient()
+  const { data: existing } = await supabase.from('prestadores_servicos').select('nome')
+  const existingNames = new Set((existing ?? []).map(p => p.nome.toLowerCase()))
+  let created = 0, errors = 0
+  for (const row of rows) {
+    if (!row.nome?.trim()) { errors++; continue }
+    if (existingNames.has(row.nome.trim().toLowerCase())) continue
+    const { error } = await supabase.from('prestadores_servicos').insert({
+      nome: row.nome.trim(),
+      pessoa_contacto: str(row.pessoa_contacto),
+      contacto: str(row.contacto),
+      regiao: str(row.regiao),
+      notas: str(row.notas),
+    })
+    if (error) errors++; else { created++; existingNames.add(row.nome.trim().toLowerCase()) }
+  }
+  revalidatePath('/prestadores')
+  return { created, errors }
+}
+
 const ESTADOS_VALIDOS = ['por_comecar', 'em_curso', 'concluida', 'pausada'] as const
 
 export async function bulkImportSites(rows: Row[]): Promise<{ created: number; errors: number }> {

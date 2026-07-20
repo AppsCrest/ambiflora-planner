@@ -135,6 +135,30 @@ export type Database = {
           { foreignKeyName: "ae_equipment_id_fkey"; columns: ["equipment_id"]; isOneToOne: false; referencedRelation: "equipment"; referencedColumns: ["id"] }
         ]
       }
+      prestadores_servicos: {
+        Row: {
+          id: string; nome: string; pessoa_contacto: string | null; contacto: string | null
+          regiao: string | null; notas: string | null; ativo: boolean; created_at: string; updated_at: string
+        }
+        Insert: {
+          id?: string; nome: string; pessoa_contacto?: string | null; contacto?: string | null
+          regiao?: string | null; notas?: string | null; ativo?: boolean
+        }
+        Update: {
+          id?: string; nome?: string; pessoa_contacto?: string | null; contacto?: string | null
+          regiao?: string | null; notas?: string | null; ativo?: boolean
+        }
+        Relationships: []
+      }
+      obra_prestadores: {
+        Row: { site_id: string; prestador_id: string; created_at: string }
+        Insert: { site_id: string; prestador_id: string }
+        Update: { site_id?: string; prestador_id?: string }
+        Relationships: [
+          { foreignKeyName: "obra_prestadores_site_id_fkey"; columns: ["site_id"]; isOneToOne: false; referencedRelation: "sites"; referencedColumns: ["id"] },
+          { foreignKeyName: "obra_prestadores_prestador_id_fkey"; columns: ["prestador_id"]; isOneToOne: false; referencedRelation: "prestadores_servicos"; referencedColumns: ["id"] }
+        ]
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>

@@ -65,6 +65,7 @@ export async function upsertAssignment(input: {
   periodo: 'manha' | 'tarde'
   team_id?: string | null
   worker_id?: string | null
+  prestador_id?: string | null
   site_id: string
   notas: string
   equipment_ids: string[]
@@ -134,6 +135,7 @@ export async function bulkCreateAssignments(input: {
   periodo: 'manha' | 'tarde'
   team_id?: string | null
   worker_id?: string | null
+  prestador_id?: string | null
   site_id: string
   notas: string
   equipment_ids: string[]

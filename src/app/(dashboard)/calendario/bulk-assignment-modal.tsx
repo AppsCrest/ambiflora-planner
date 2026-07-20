@@ -78,9 +78,10 @@ export interface EditBlockData {
   startPeriodo: 'manha' | 'tarde'
   endDate: string
   endPeriodo: 'manha' | 'tarde'
-  mode: 'equipa' | 'trabalhador'
+  mode: 'equipa' | 'trabalhador' | 'prestador'
   teamId: string
   workerId: string
+  prestadorId: string
   siteId: string
   notas: string
   equipmentIds: string[]
@@ -104,7 +105,7 @@ interface Props {
 export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipment, prestadores, workers, existingAssignments, teamMembers, editBlock }: Props) {
   const today = new Date().toISOString().split('T')[0]
 
-  const [mode, setMode] = useState<'equipa' | 'trabalhador'>('equipa')
+  const [mode, setMode] = useState<'equipa' | 'trabalhador' | 'prestador'>('equipa')
   const [startDate, setStartDate] = useState(today)
   const [startDateDisplay, setStartDateDisplay] = useState(() => toDMY(today))
   const [startPeriodo, setStartPeriodo] = useState<'manha' | 'tarde'>('manha')
@@ -113,6 +114,7 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
   const [endPeriodo, setEndPeriodo] = useState<'manha' | 'tarde'>('tarde')
   const [teamId, setTeamId] = useState('')
   const [workerId, setWorkerId] = useState('')
+  const [prestadorId, setPrestadorId] = useState('')
   const [siteId, setSiteId] = useState('')
   const [notas, setNotas] = useState('')
   const [equipmentIds, setEquipmentIds] = useState<string[]>([])
@@ -134,6 +136,7 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
       setEndPeriodo(editBlock.endPeriodo)
       setTeamId(editBlock.teamId)
       setWorkerId(editBlock.workerId)
+      setPrestadorId(editBlock.prestadorId)
       setSiteId(editBlock.siteId)
       setNotas(editBlock.notas)
       setEquipmentIds(editBlock.equipmentIds)
@@ -154,6 +157,7 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
     setEndPeriodo('tarde')
     setTeamId('')
     setWorkerId('')
+    setPrestadorId('')
     setSiteId('')
     setNotas('')
     setEquipmentIds([])
@@ -177,10 +181,10 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
     })
   }, [startDate, startPeriodo, endDate, endPeriodo, includeWeekends])
 
-  const activeId = mode === 'equipa' ? teamId : workerId
+  const activeId = mode === 'equipa' ? teamId : mode === 'trabalhador' ? workerId : prestadorId
 
   const conflicts: ConflictInfo[] = useMemo(() => {
-    if (!activeId) return []
+    if (!activeId || mode === 'prestador') return []
     const excludeIds = new Set(editBlock?.ids ?? [])
     const workerToTeams = new Map<string, Set<string>>()
     const teamToWorkers = new Map<string, Set<string>>()
@@ -218,6 +222,19 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
     })
   }, [periods, activeId, mode, existingAssignments, editBlock, teamMembers])
 
+  // Aviso não-bloqueante: prestador já alocado a outra obra nalgum período do intervalo.
+  // Ao contrário de equipa/trabalhador, isto NÃO impede a criação das alocações.
+  const prestadorWarnings: ConflictInfo[] = useMemo(() => {
+    if (mode !== 'prestador' || !activeId) return []
+    const excludeIds = new Set(editBlock?.ids ?? [])
+    return periods.flatMap(p => {
+      const hit = existingAssignments.find(a =>
+        !excludeIds.has(a.id) && a.data === p.data && a.periodo === p.periodo && a.prestador_id === activeId
+      )
+      return hit ? [{ ...p, existingSiteName: hit.sites?.nome ?? '?' }] : []
+    })
+  }, [periods, activeId, mode, existingAssignments, editBlock])
+
   const periodsToCreate = useMemo(() => {
     const keys = new Set(conflicts.map(c => `${c.data}|${c.periodo}`))
     return periods.filter(p => !keys.has(`${p.data}|${p.periodo}`))
@@ -247,6 +264,7 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
     if (!siteId) { toast.error('Escolhe a obra'); return }
     if (mode === 'equipa' && !teamId) { toast.error('Escolhe a equipa'); return }
     if (mode === 'trabalhador' && !workerId) { toast.error('Escolhe o trabalhador'); return }
+    if (mode === 'prestador' && !prestadorId) { toast.error('Escolhe o prestador'); return }
     if (periods.length === 0) { toast.error('O intervalo de datas não é válido'); return }
     if (conflicts.length > 0) { setStep('confirm'); return }
     doCreate()
@@ -263,6 +281,7 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
           periodo: p.periodo,
           team_id: mode === 'equipa' ? teamId : null,
           worker_id: mode === 'trabalhador' ? workerId : null,
+          prestador_id: mode === 'prestador' ? prestadorId : null,
           site_id: siteId,
           notas,
           equipment_ids: equipmentIds,
@@ -408,7 +427,7 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
               Incluir fins de semana
             </label>
 
-            {/* Toggle Equipa / Trabalhador */}
+            {/* Toggle Equipa / Trabalhador / Prestador de Serviço */}
             <div className="flex rounded-lg border overflow-hidden text-sm">
               <button type="button" onClick={() => setMode('equipa')}
                 className={`flex-1 py-1.5 font-medium transition-colors ${mode === 'equipa' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/50 text-slate-600'}`}>
@@ -417,6 +436,10 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
               <button type="button" onClick={() => setMode('trabalhador')}
                 className={`flex-1 py-1.5 font-medium transition-colors border-l ${mode === 'trabalhador' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/50 text-slate-600'}`}>
                 Trabalhador
+              </button>
+              <button type="button" onClick={() => setMode('prestador')}
+                className={`flex-1 py-1.5 font-medium transition-colors border-l ${mode === 'prestador' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/50 text-slate-600'}`}>
+                Prestador de Serviço
               </button>
             </div>
 
@@ -441,7 +464,7 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
                   </SelectContent>
                 </Select>
               </div>
-            ) : (
+            ) : mode === 'trabalhador' ? (
               <div className="space-y-1.5">
                 <Label>Trabalhador *</Label>
                 <Select value={workerId} onValueChange={v => setWorkerId(v ?? '')}>
@@ -456,6 +479,28 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <Label>Prestador de Serviço *</Label>
+                <Select value={prestadorId} onValueChange={v => setPrestadorId(v ?? '')}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Escolher prestador...">
+                      {prestadorId ? prestadores.find(p => p.id === prestadorId)?.nome : null}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {prestadores.map(p => (
+                      <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {prestadorWarnings.length > 0 && (
+                  <p className="text-[11px] text-amber-600 flex items-start gap-1">
+                    <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+                    Este prestador já está alocado a outra obra em {prestadorWarnings.length} período{prestadorWarnings.length !== 1 ? 's' : ''} deste intervalo. Serão criadas na mesma.
+                  </p>
+                )}
               </div>
             )}
 
@@ -577,7 +622,7 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
               <DialogClose render={<Button variant="outline" size="sm" />}>Cancelar</DialogClose>
               <Button
                 size="sm"
-                disabled={isPending || (mode === 'equipa' ? !teamId : !workerId) || !siteId || periodsToCreate.length === 0}
+                disabled={isPending || (mode === 'equipa' ? !teamId : mode === 'trabalhador' ? !workerId : !prestadorId) || !siteId || periodsToCreate.length === 0}
                 onClick={handleVerificar}
               >
                 {isPending

@@ -107,22 +107,23 @@ export type Database = {
       assignments: {
         Row: {
           id: string; data: string; periodo: 'manha' | 'tarde'
-          team_id: string | null; worker_id: string | null; site_id: string
+          team_id: string | null; worker_id: string | null; prestador_id: string | null; site_id: string
           notas: string | null; created_at: string; updated_at: string
         }
         Insert: {
           id?: string; data: string; periodo: 'manha' | 'tarde'
-          team_id?: string | null; worker_id?: string | null; site_id: string
+          team_id?: string | null; worker_id?: string | null; prestador_id?: string | null; site_id: string
           notas?: string | null
         }
         Update: {
           id?: string; data?: string; periodo?: 'manha' | 'tarde'
-          team_id?: string | null; worker_id?: string | null; site_id?: string
+          team_id?: string | null; worker_id?: string | null; prestador_id?: string | null; site_id?: string
           notas?: string | null
         }
         Relationships: [
           { foreignKeyName: "assignments_team_id_fkey"; columns: ["team_id"]; isOneToOne: false; referencedRelation: "teams"; referencedColumns: ["id"] },
           { foreignKeyName: "assignments_worker_id_fkey"; columns: ["worker_id"]; isOneToOne: false; referencedRelation: "workers"; referencedColumns: ["id"] },
+          { foreignKeyName: "assignments_prestador_id_fkey"; columns: ["prestador_id"]; isOneToOne: false; referencedRelation: "prestadores_servicos"; referencedColumns: ["id"] },
           { foreignKeyName: "assignments_site_id_fkey"; columns: ["site_id"]; isOneToOne: false; referencedRelation: "sites"; referencedColumns: ["id"] }
         ]
       }

@@ -84,6 +84,7 @@ export interface EditBlockData {
   siteId: string
   notas: string
   equipmentIds: string[]
+  prestadorIds: string[]
   includeWeekends: boolean
 }
 
@@ -93,13 +94,14 @@ interface Props {
   teams: { id: string; nome: string; cor: string }[]
   sites: { id: string; nome: string }[]
   equipment: { id: string; nome: string }[]
+  prestadores: { id: string; nome: string }[]
   workers: { id: string; nome: string }[]
   existingAssignments: Assignment[]
   teamMembers: { team_id: string; worker_id: string }[]
   editBlock?: EditBlockData | null
 }
 
-export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipment, workers, existingAssignments, teamMembers, editBlock }: Props) {
+export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipment, prestadores, workers, existingAssignments, teamMembers, editBlock }: Props) {
   const today = new Date().toISOString().split('T')[0]
 
   const [mode, setMode] = useState<'equipa' | 'trabalhador'>('equipa')
@@ -114,6 +116,7 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
   const [siteId, setSiteId] = useState('')
   const [notas, setNotas] = useState('')
   const [equipmentIds, setEquipmentIds] = useState<string[]>([])
+  const [prestadorIds, setPrestadorIds] = useState<string[]>([])
   const [includeWeekends, setIncludeWeekends] = useState(false)
   const startDateRef = useRef<HTMLInputElement>(null)
   const endDateRef = useRef<HTMLInputElement>(null)
@@ -134,6 +137,7 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
       setSiteId(editBlock.siteId)
       setNotas(editBlock.notas)
       setEquipmentIds(editBlock.equipmentIds)
+      setPrestadorIds(editBlock.prestadorIds)
       setIncludeWeekends(editBlock.includeWeekends)
       setStep('form')
     }
@@ -153,6 +157,7 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
     setSiteId('')
     setNotas('')
     setEquipmentIds([])
+    setPrestadorIds([])
     setIncludeWeekends(false)
     setStep('form')
   }
@@ -233,6 +238,10 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
     setEquipmentIds(prev => prev.includes(id) ? prev.filter(e => e !== id) : [...prev, id])
   }
 
+  function togglePrestador(id: string) {
+    setPrestadorIds(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id])
+  }
+
   function handleVerificar() {
     if (isPending) return
     if (!siteId) { toast.error('Escolhe a obra'); return }
@@ -257,6 +266,7 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
           site_id: siteId,
           notas,
           equipment_ids: equipmentIds,
+          prestador_ids: prestadorIds,
         }))
       )
       const n = result.created
@@ -496,6 +506,26 @@ export function BulkAssignmentModal({ open, onOpenChange, teams, sites, equipmen
                     Equipamentos marcados como "Parcial" já estão alocados nalguns períodos do intervalo.
                   </p>
                 )}
+              </div>
+            )}
+
+            {/* Prestadores de Serviços */}
+            {prestadores.length > 0 && (
+              <div className="space-y-1.5">
+                <Label>Prestadores de Serviços</Label>
+                <div className="grid grid-cols-2 gap-1.5 max-h-28 overflow-y-auto pr-1">
+                  {prestadores.map(p => {
+                    const checked = prestadorIds.includes(p.id)
+                    return (
+                      <label key={p.id} className={`flex items-center gap-2 text-sm rounded-md border px-2 py-1.5 cursor-pointer transition-colors ${
+                        checked ? 'border-primary bg-primary/5 text-primary' : 'hover:bg-muted/50'
+                      }`}>
+                        <input type="checkbox" checked={checked} onChange={() => togglePrestador(p.id)} className="accent-primary" />
+                        <span className="truncate">{p.nome}</span>
+                      </label>
+                    )
+                  })}
+                </div>
               </div>
             )}
 

@@ -68,6 +68,7 @@ export async function deleteWorker(id: string) {
   if (workerAssignments && workerAssignments.length > 0) {
     const aIds = workerAssignments.map(a => a.id)
     await supabase.from('assignment_equipment').delete().in('assignment_id', aIds)
+    await supabase.from('assignment_prestadores').delete().in('assignment_id', aIds)
     await supabase.from('assignments').delete().in('id', aIds)
   }
   await supabase.from('team_members').delete().eq('worker_id', id)
@@ -84,6 +85,7 @@ export async function deleteWorkers(ids: string[]) {
   if (workerAssignments && workerAssignments.length > 0) {
     const aIds = workerAssignments.map(a => a.id)
     await supabase.from('assignment_equipment').delete().in('assignment_id', aIds)
+    await supabase.from('assignment_prestadores').delete().in('assignment_id', aIds)
     await supabase.from('assignments').delete().in('id', aIds)
   }
   await supabase.from('team_members').delete().in('worker_id', ids)

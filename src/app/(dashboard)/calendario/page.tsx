@@ -23,17 +23,19 @@ export default async function CalendarioPage({
     { data: sites },
     { data: workers },
     { data: equipment },
+    { data: prestadores },
     { data: teamMembers },
   ] = await Promise.all([
     supabase
       .from('assignments')
-      .select('id, data, periodo, team_id, worker_id, site_id, notas, teams(id, nome, cor), workers(id, nome), sites(id, nome), assignment_equipment(equipment_id)')
+      .select('id, data, periodo, team_id, worker_id, site_id, notas, teams(id, nome, cor), workers(id, nome), sites(id, nome), assignment_equipment(equipment_id), assignment_prestadores(prestador_id)')
       .gte('data', startDate)
       .lte('data', endDate),
     supabase.from('teams').select('id, nome, cor').eq('ativo', true).order('nome'),
     supabase.from('sites').select('id, nome').in('estado', ['por_comecar', 'em_curso']).order('nome'),
     supabase.from('workers').select('id, nome').eq('ativo', true).order('nome'),
     supabase.from('equipment').select('id, nome').eq('ativo', true).order('nome'),
+    supabase.from('prestadores_servicos').select('id, nome').eq('ativo', true).order('nome'),
     supabase.from('team_members').select('team_id, worker_id').is('data_fim', null),
   ])
 
@@ -46,6 +48,7 @@ export default async function CalendarioPage({
       sites={sites ?? []}
       workers={workers ?? []}
       equipment={equipment ?? []}
+      prestadores={prestadores ?? []}
       teamMembers={teamMembers ?? []}
     />
   )

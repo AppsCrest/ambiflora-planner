@@ -159,6 +159,15 @@ export type Database = {
           { foreignKeyName: "obra_prestadores_prestador_id_fkey"; columns: ["prestador_id"]; isOneToOne: false; referencedRelation: "prestadores_servicos"; referencedColumns: ["id"] }
         ]
       }
+      assignment_prestadores: {
+        Row: { assignment_id: string; prestador_id: string; created_at: string }
+        Insert: { assignment_id: string; prestador_id: string }
+        Update: { assignment_id?: string; prestador_id?: string }
+        Relationships: [
+          { foreignKeyName: "ap_assignment_id_fkey"; columns: ["assignment_id"]; isOneToOne: false; referencedRelation: "assignments"; referencedColumns: ["id"] },
+          { foreignKeyName: "ap_prestador_id_fkey"; columns: ["prestador_id"]; isOneToOne: false; referencedRelation: "prestadores_servicos"; referencedColumns: ["id"] }
+        ]
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>

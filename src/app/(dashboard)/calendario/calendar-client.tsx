@@ -70,6 +70,7 @@ export type Assignment = {
   workers: { id: string; nome: string } | null
   sites: { id: string; nome: string } | null
   assignment_equipment: { equipment_id: string }[]
+  assignment_prestadores: { prestador_id: string }[]
 }
 
 export type SelectedCell = {
@@ -85,10 +86,11 @@ interface Props {
   sites: { id: string; nome: string }[]
   workers: { id: string; nome: string }[]
   equipment: { id: string; nome: string }[]
+  prestadores: { id: string; nome: string }[]
   teamMembers: { team_id: string; worker_id: string }[]
 }
 
-export function CalendarClient({ ano, mes, assignments, teams, sites, workers, equipment, teamMembers }: Props) {
+export function CalendarClient({ ano, mes, assignments, teams, sites, workers, equipment, prestadores, teamMembers }: Props) {
   const router = useRouter()
   const [filterTeam, setFilterTeam] = useState<string>('')
   const [filterSite, setFilterSite] = useState<string>('')
@@ -106,6 +108,7 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
       .channel('calendar-rt')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'assignments' }, () => router.refresh())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'assignment_equipment' }, () => router.refresh())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'assignment_prestadores' }, () => router.refresh())
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [router])
@@ -204,6 +207,7 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
       siteId: a.site_id,
       notas: a.notas ?? '',
       equipmentIds: a.assignment_equipment.map(e => e.equipment_id),
+      prestadorIds: a.assignment_prestadores.map(p => p.prestador_id),
       includeWeekends: hasWeekends,
     })
     setBlockEditOpen(true)
@@ -391,6 +395,7 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
         teams={teams}
         sites={sites}
         equipment={equipment}
+        prestadores={prestadores}
         workers={workers}
         existingAssignments={assignments}
         teamMembers={teamMembers}
@@ -403,6 +408,7 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
         teams={teams}
         sites={sites}
         equipment={equipment}
+        prestadores={prestadores}
         workers={workers}
         existingAssignments={assignments}
         teamMembers={teamMembers}
@@ -417,6 +423,7 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
         teams={teams}
         sites={sites}
         equipment={equipment}
+        prestadores={prestadores}
         workers={workers}
         existingAssignments={assignments}
       />

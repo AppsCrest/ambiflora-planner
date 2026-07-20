@@ -94,7 +94,6 @@ export async function deleteSites(ids: string[]) {
   if (siteAssignments && siteAssignments.length > 0) {
     const aIds = siteAssignments.map(a => a.id)
     await supabase.from('assignment_equipment').delete().in('assignment_id', aIds)
-    await supabase.from('assignment_prestadores').delete().in('assignment_id', aIds)
     await supabase.from('assignments').delete().in('id', aIds)
   }
   const { error } = await supabase.from('sites').delete().in('id', ids)
@@ -111,7 +110,6 @@ export async function deleteSite(id: string) {
   if (siteAssignments && siteAssignments.length > 0) {
     const ids = siteAssignments.map(a => a.id)
     await supabase.from('assignment_equipment').delete().in('assignment_id', ids)
-    await supabase.from('assignment_prestadores').delete().in('assignment_id', ids)
     await supabase.from('assignments').delete().in('id', ids)
   }
   const { error } = await supabase.from('sites').delete().eq('id', id)

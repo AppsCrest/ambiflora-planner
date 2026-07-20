@@ -57,7 +57,6 @@ export async function deleteTeams(ids: string[]) {
   if (teamAssignments && teamAssignments.length > 0) {
     const aIds = teamAssignments.map((a: any) => a.id)
     await supabase.from('assignment_equipment').delete().in('assignment_id', aIds)
-    await supabase.from('assignment_prestadores').delete().in('assignment_id', aIds)
     await supabase.from('assignments').delete().in('id', aIds)
   }
   const { error } = await supabase.from('teams').delete().in('id', ids)
@@ -74,7 +73,6 @@ export async function deleteTeam(id: string) {
   if (teamAssignments && teamAssignments.length > 0) {
     const ids = teamAssignments.map(a => a.id)
     await supabase.from('assignment_equipment').delete().in('assignment_id', ids)
-    await supabase.from('assignment_prestadores').delete().in('assignment_id', ids)
     await supabase.from('assignments').delete().in('id', ids)
   }
   // team_members tem ON DELETE CASCADE

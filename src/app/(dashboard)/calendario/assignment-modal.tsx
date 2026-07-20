@@ -44,7 +44,6 @@ export function AssignmentModal({
   const [siteId, setSiteId] = useState('')
   const [notas, setNotas] = useState('')
   const [equipmentIds, setEquipmentIds] = useState<string[]>([])
-  const [prestadorIds, setPrestadorIds] = useState<string[]>([])
 
   useEffect(() => {
     if (open) {
@@ -55,7 +54,6 @@ export function AssignmentModal({
       setSiteId('')
       setNotas('')
       setEquipmentIds([])
-      setPrestadorIds([])
     }
   }, [open])
 
@@ -88,10 +86,6 @@ export function AssignmentModal({
     setEquipmentIds(prev => prev.includes(id) ? prev.filter(e => e !== id) : [...prev, id])
   }
 
-  function togglePrestador(id: string) {
-    setPrestadorIds(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id])
-  }
-
   function handleSubmit() {
     if (isPending) return
     if (!selectedCell || !siteId) {
@@ -119,7 +113,6 @@ export function AssignmentModal({
         site_id: siteId,
         notas,
         equipment_ids: equipmentIds,
-        prestador_ids: prestadorIds,
       })
       if (result.error) {
         toast.error(result.error)
@@ -311,39 +304,6 @@ export function AssignmentModal({
                       {occupied && !checked && (
                         <span className="text-[10px] text-red-500 ml-auto shrink-0">Ocupado</span>
                       )}
-                    </label>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Prestadores de Serviços */}
-          <div className="space-y-1">
-            <Label>Prestadores de Serviços</Label>
-            {prestadores.length === 0 ? (
-              <p className="text-xs text-gray-400 py-1">
-                Nenhum prestador registado.{' '}
-                <a href="/prestadores/novo" className="underline text-primary">Adicionar prestador</a>
-              </p>
-            ) : (
-              <div className="grid grid-cols-2 gap-1.5 max-h-36 overflow-y-auto pr-1">
-                {prestadores.map(p => {
-                  const checked = prestadorIds.includes(p.id)
-                  return (
-                    <label
-                      key={p.id}
-                      className={`flex items-center gap-2 text-sm rounded-md border px-2 py-1.5 cursor-pointer transition-colors ${
-                        checked ? 'border-primary bg-primary/5 text-primary' : 'hover:bg-gray-50'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => togglePrestador(p.id)}
-                        className="accent-primary"
-                      />
-                      <span className="truncate">{p.nome}</span>
                     </label>
                   )
                 })}

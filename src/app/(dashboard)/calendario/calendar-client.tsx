@@ -76,7 +76,6 @@ export type Assignment = {
   prestadores_servicos: { id: string; nome: string } | null
   sites: { id: string; nome: string } | null
   assignment_equipment: { equipment_id: string }[]
-  assignment_prestadores: { prestador_id: string }[]
 }
 
 export type SelectedCell = {
@@ -115,7 +114,6 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
       .channel('calendar-rt')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'assignments' }, () => router.refresh())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'assignment_equipment' }, () => router.refresh())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'assignment_prestadores' }, () => router.refresh())
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [router])
@@ -142,11 +140,7 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
       if (filterEquipment) {
         if (!a.assignment_equipment.some(e => e.equipment_id === filterEquipment)) return false
       }
-      if (filterPrestador) {
-        const matchesPrimary = a.prestador_id === filterPrestador
-        const matchesTag = a.assignment_prestadores.some(p => p.prestador_id === filterPrestador)
-        if (!matchesPrimary && !matchesTag) return false
-      }
+      if (filterPrestador && a.prestador_id !== filterPrestador) return false
       return true
     })
   }, [assignments, filterTeam, filterSite, filterWorker, filterEquipment, filterPrestador, workerTeams])
@@ -220,7 +214,6 @@ export function CalendarClient({ ano, mes, assignments, teams, sites, workers, e
       siteId: a.site_id,
       notas: a.notas ?? '',
       equipmentIds: a.assignment_equipment.map(e => e.equipment_id),
-      prestadorIds: a.assignment_prestadores.map(p => p.prestador_id),
       includeWeekends: hasWeekends,
     })
     setBlockEditOpen(true)

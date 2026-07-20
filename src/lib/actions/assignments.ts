@@ -69,10 +69,9 @@ export async function upsertAssignment(input: {
   site_id: string
   notas: string
   equipment_ids: string[]
-  prestador_ids: string[]
 }) {
   const supabase = await createClient()
-  const { id, equipment_ids, prestador_ids, ...fields } = input
+  const { id, equipment_ids, ...fields } = input
 
   const conflict = await checkConflict(
     supabase, input.data, input.periodo,
@@ -91,14 +90,6 @@ export async function upsertAssignment(input: {
       )
       if (eqErr) return { error: eqErr.message }
     }
-
-    await supabase.from('assignment_prestadores').delete().eq('assignment_id', id)
-    if (prestador_ids.length > 0) {
-      const { error: prErr } = await supabase.from('assignment_prestadores').insert(
-        prestador_ids.map(prestador_id => ({ assignment_id: id, prestador_id }))
-      )
-      if (prErr) return { error: prErr.message }
-    }
   } else {
     const { data: created, error } = await supabase
       .from('assignments').insert(fields).select('id').single()
@@ -111,17 +102,6 @@ export async function upsertAssignment(input: {
       if (eqErr) {
         await supabase.from('assignments').delete().eq('id', created.id)
         return { error: eqErr.message }
-      }
-    }
-
-    if (prestador_ids.length > 0) {
-      const { error: prErr } = await supabase.from('assignment_prestadores').insert(
-        prestador_ids.map(prestador_id => ({ assignment_id: created.id, prestador_id }))
-      )
-      if (prErr) {
-        await supabase.from('assignment_equipment').delete().eq('assignment_id', created.id)
-        await supabase.from('assignments').delete().eq('id', created.id)
-        return { error: prErr.message }
       }
     }
   }
@@ -139,7 +119,6 @@ export async function bulkCreateAssignments(input: {
   site_id: string
   notas: string
   equipment_ids: string[]
-  prestador_ids: string[]
 }[]): Promise<{ created: number }> {
   if (input.length === 0) return { created: 0 }
   const supabase = await createClient()
@@ -179,7 +158,7 @@ export async function bulkCreateAssignments(input: {
 
   let created = 0
 
-  for (const { equipment_ids, prestador_ids, ...fields } of input) {
+  for (const { equipment_ids, ...fields } of input) {
     const k = `${fields.data}|${fields.periodo}`
     const slots = slotMap[k] ?? []
     let skip = false
@@ -219,12 +198,6 @@ export async function bulkCreateAssignments(input: {
       )
     }
 
-    if (prestador_ids.length > 0) {
-      await supabase.from('assignment_prestadores').insert(
-        prestador_ids.map(prestador_id => ({ assignment_id: row.id, prestador_id }))
-      )
-    }
-
     // Update slotMap to prevent intra-batch duplicates
     ;(slotMap[k] ??= []).push({
       ...fields, id: row.id,
@@ -242,7 +215,6 @@ export async function deleteAssignments(ids: string[]) {
   if (ids.length === 0) return { success: true }
   const supabase = await createClient()
   await supabase.from('assignment_equipment').delete().in('assignment_id', ids)
-  await supabase.from('assignment_prestadores').delete().in('assignment_id', ids)
   const { error } = await supabase.from('assignments').delete().in('id', ids)
   if (error) return { error: error.message }
   revalidatePath('/calendario')
@@ -252,7 +224,6 @@ export async function deleteAssignments(ids: string[]) {
 export async function deleteAssignment(id: string) {
   const supabase = await createClient()
   await supabase.from('assignment_equipment').delete().eq('assignment_id', id)
-  await supabase.from('assignment_prestadores').delete().eq('assignment_id', id)
   const { error } = await supabase.from('assignments').delete().eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/calendario')
